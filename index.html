@@ -15,6 +15,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{--teal:#0B4F56;--gold:#C69C3A;--ruby:#C81D25;--bg:#F4F7F8;--card:#fff;--tx:#17262a;--mut:#5d7176;--bd:#dbe4e6;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -87,10 +90,11 @@ function sha256js(m){const r=(x,n)=>(x>>>n)|(x<<(32-n)),pr=[];for(let c=2;pr.len
   [a,q,c,d,e,f,g,h].forEach((v,i)=>H[i]=(H[i]+v)|0)}
  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('')}
 const sha=async s=>(window.crypto&&crypto.subtle)?[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join(''):sha256js(s);
-const DEF=()=>({auth:{u:'ddr5',h:''},cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[{id:'e1',name:'',title:'',spec:'',phone:'',photo:''}],att:{},lv:{},tasks:[],duties:[],cur:'e1'});
-let DB=null,authed=false;try{DB=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!DB)DB=DEF();
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){toast('تعذّر الحفظ: المساحة ممتلئة')}};
+const firebaseConfig={apiKey:"AIzaSyDp9PrUAW02wr4YrjZN2oazl8IQ_k92S98",authDomain:"hashd-martyrs.firebaseapp.com",projectId:"hashd-martyrs",storageBucket:"hashd-martyrs.firebasestorage.app",messagingSenderId:"50676622106",appId:"1:50676622106:web:dc40b0392f114c18ce42a3",measurementId:"G-00QS55945M"};
+const ADMIN_EMAIL='ddr5@hashd-martyrs.app',MAIL=u=>u.toLowerCase()+'@hashd-martyrs.app',UNRE=/^[a-z0-9._-]{3,30}$/;
+const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],cur:''});
+let DB=DEF(),authed=false,ready=false,fbDb=null,fbAuth=null,UNS=[],SYNC={},FIRST=new Set(),tSave=0,tR=0;
+const save=()=>cloudSave();
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 function ask(msg,o={}){return new Promise(res=>{const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:grid;place-items:center;padding:16px';
  const fld=o.input?(o.area?'<textarea id="dlgv" rows="6" dir="ltr"></textarea>':'<input id="dlgv">'):'';
@@ -99,7 +103,7 @@ function ask(msg,o={}){return new Promise(res=>{const d=document.createElement('
  const fin=x=>{d.remove();res(x)};d.querySelector('#dlgok').onclick=()=>fin(o.input?(v?v.value:''):true);const n=d.querySelector('#dlgno');if(n)n.onclick=()=>fin(o.input?null:false);const al=d.querySelector('#dlgalt');if(al)al.onclick=()=>fin('ALT')})}
 const askC=m=>ask(m),askP=(m,def)=>ask(m,{input:1,def});
 let ME=null;const isAdmin=()=>ME==='admin',adm=()=>isAdmin()||(toast('هذا الإجراء للمدير الرئيسي فقط'),false);
-const EMP=id=>DB.emps.find(x=>x.id===id)||DB.emps[0];
+const EMP=id=>DB.emps.find(x=>x.id===id)||DB.emps[0]||{id:'',name:'',title:'',spec:'',phone:'',photo:'',user:''};
 const A=(d,e=DB.cur)=>DB.att[e+'|'+d];
 const off=d=>DB.cfg.wk.includes(pd(d).getDay())||DB.cfg.hol.includes(d);
 const hasDuty=(e,d)=>DB.duties.some(x=>x.e===e&&x.d===d);
@@ -139,29 +143,30 @@ async function punch(k){const man=DB.cfg.manual&&LOC&&LOC.err;
  if(man){if(await askC('تعذّر GPS. تسجيل '+(k==='in'?'الحضور':'الانصراف')+' يدوياً؟'))rec(k,0,true);return}
  if(DB.cfg.lat==null)return toast('حدّد موقع المقر من الإعدادات (المدير)');toast('جارٍ التحقق من موقعك...');
  getPos(p=>{const d=dist(p.coords.latitude,p.coords.longitude,DB.cfg.lat,DB.cfg.lng),acc=p.coords.accuracy||0;if(acc>300)return toast('دقة GPS ضعيفة (±'+Math.round(acc)+' م). انتقل إلى مكان مفتوح');if(d-Math.min(acc,50)>DB.cfg.r)return toast('أنت خارج نطاق المقر ('+Math.round(d)+' م)');rec(k,d)},er=>{toast(why(er.code));watch()})}
-function rec(k,d,man){const t=today(),n=hm(new Date()),key=DB.cur+'|'+t;if(k==='in'){if(DB.att[key])return;DB.att[key]={in:n,d:Math.round(d)}}else{if(!DB.att[key])return;DB.att[key].out=n}if(man)DB.att[key].m=1;save();toast((k==='in'?'تم تسجيل الحضور ':'تم تسجيل الانصراف ')+n);render()}
+function rec(k,d,man){if(!DB.cur)return toast('أضف موظفاً أولاً');const t=today(),n=hm(new Date()),key=DB.cur+'|'+t;if(k==='in'){if(DB.att[key])return;DB.att[key]={in:n,d:Math.round(d)}}else{if(!DB.att[key])return;DB.att[key].out=n}if(man)DB.att[key].m=1;save();toast((k==='in'?'تم تسجيل الحضور ':'تم تسجيل الانصراف ')+n);render()}
 
 // ---------- الواجهة ----------
 let view='today',BM=mk(today()),R={k:'month',d:today()},EF=null;
 const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
 function render(){
  $('hl').src=LOGO;
- if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML=`<div class="card login"><img src="${LOGO}" alt="الشعار"><h2 style="border:0;padding:0;text-align:center">المهندس</h2><label>اسم المستخدم</label><input id="lu" autocomplete="username" dir="ltr"><label>كلمة المرور</label><input id="lp" type="password" autocomplete="current-password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button>${freshDev()?'<button class="btn ghost" style="width:100%;margin-top:10px" onclick="impPack(true)">جهاز موظف جديد؟ استيراد حزمة الدخول من المدير</button>':''}</div><div class="credit">إعداد المهندس حسين الزيدي</div>`;return}
+ if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML=`<div class="card login"><img src="${LOGO}" alt="الشعار"><h2 style="border:0;padding:0;text-align:center">المهندس</h2><label>اسم المستخدم</label><input id="lu" autocomplete="username" dir="ltr"><label>كلمة المرور</label><input id="lp" type="password" autocomplete="current-password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button></div><div class="credit">إعداد المهندس حسين الزيدي</div>`;return}
+ if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ تحميل البيانات من السحابة...</div>';return}if(!isAdmin()&&ME)DB.cur=ME;
  const hs=$('hs');hs.hidden=!isAdmin();$('hout').hidden=false;hs.innerHTML=DB.emps.map(e=>`<option value="${e.id}" ${e.id===DB.cur?'selected':''}>${esc(e.name||'موظف')}</option>`).join('');
  if((!isAdmin()&&(view==='emp'||view==='set'))||(isAdmin()&&view==='acc'))view='today';
  $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}</button>`).join('');
  $('v').innerHTML=V[view]()+'<div class="credit">إعداد المهندس حسين الزيدي</div>';
  if(view==='today')updGps();
 }
-async function doLogin(){const u=$('lu').value.trim(),h=await sha($('lp').value);ME=null;if(u===DB.auth.u&&h===DB.auth.h)ME='admin';else{const e=DB.emps.find(x=>x.user&&x.user===u&&x.h===h);if(e){ME=e.id;DB.cur=e.id;save()}}
- if(!ME)return toast('اسم المستخدم أو كلمة المرور غير صحيحة');authed=true;try{sessionStorage.setItem('mA',ME)}catch(e){}view='today';render();watch()}
-function logout(){authed=false;ME=null;try{sessionStorage.removeItem('mA')}catch(e){}if(wid!=null&&navigator.geolocation){navigator.geolocation.clearWatch(wid);wid=null}LOC=null;render()}
+function authMsg(e){const c=(e&&e.code)||'';if(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c))return'اسم المستخدم أو كلمة المرور غير صحيحة';if(c==='auth/too-many-requests')return'محاولات كثيرة، انتظر قليلاً ثم أعد المحاولة';if(c==='auth/network-request-failed')return'لا يوجد اتصال بالإنترنت';if(c==='auth/operation-not-allowed')return'فعّل تسجيل الدخول بالبريد وكلمة المرور من Firebase Authentication';if(c==='auth/requires-recent-login')return'أعد تسجيل الدخول ثم حاول مجدداً';if(c==='auth/weak-password')return'كلمة المرور ضعيفة (6 أحرف فأكثر)';return'تعذّر التنفيذ: '+(c||'خطأ')}
+async function doLogin(){const u=$('lu').value.trim().toLowerCase(),p=$('lp').value;if(!UNRE.test(u))return toast('اسم المستخدم: حروف إنجليزية وأرقام فقط');if(!p)return toast('أدخل كلمة المرور');if(!fbInit())return toast('تعذّر تحميل Firebase، تأكد من الاتصال بالإنترنت');toast('جارٍ تسجيل الدخول...');try{await fbAuth.signInWithEmailAndPassword(MAIL(u),p)}catch(e){toast(authMsg(e))}}
+async function logout(){if(wid!=null&&navigator.geolocation){navigator.geolocation.clearWatch(wid);wid=null}LOC=null;if(!fbAuth){authed=false;ME=null;render();return}try{flush();await Promise.race([fbDb.waitForPendingWrites(),new Promise(r=>setTimeout(r,3000))])}catch(e){}try{await fbAuth.signOut()}catch(e){}}
 const rec1=(k,t)=>`<div class="card row"><div><b>${esc(t.x)}</b><div class="mut">${t.d}${t.ty?' · '+esc(t.ty):''}${t.n?' · '+esc(t.n):''}</div></div>${isAdmin()?`<span style="flex:0;white-space:nowrap"><button class="btn ghost sm" onclick="editRec('${k}','${t.id}')">تعديل</button> <button class="btn ghost sm" onclick="del('${k}','${t.id}')">حذف</button></span>`:''}</div>`;
 const list=(k,n)=>[...mine(k)].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,n).map(t=>rec1(k,t)).join('')||'<div class="empty">لا توجد سجلات</div>';
 const V={
 acc(){const e=EMP(ME);return`<h2>حسابي</h2><div class="card prof">${av(e)}<div><b>${esc(e.name)}</b><div class="mut">${esc(e.title)}${e.spec?' · '+esc(e.spec):''}</div><div class="mut">اسم المستخدم: ${esc(e.user)}</div></div></div>
  <div class="card"><b>تغيير كلمة المرور</b><label>الحالية</label><input id="cp" type="password" dir="ltr"><label>الجديدة (6 أحرف فأكثر)</label><input id="np" type="password" dir="ltr"><button class="btn" onclick="chPw()">تحديث</button></div>
- <div class="card"><b>المزامنة مع المدير</b><p class="mut">أرسل بياناتك للمدير، واستورد منه التحديثات (الإجازات وإعدادات المقر).</p><div class="row"><button class="btn gold" onclick="sendRecs()">إرسال بياناتي للمدير</button><button class="btn" onclick="impPack(false)">استيراد تحديث من المدير</button></div></div>`},
+ <div class="card"><b>المزامنة</b><p class="mut">بياناتك تُحفظ في السحابة وتصل المدير تلقائياً. وإن انقطع الإنترنت تُحفظ على الجهاز وتُرفع عند عودة الاتصال.</p></div><button class="btn red" style="width:100%" onclick="logout()">تسجيل الخروج</button>`},
 today(){const t=today(),e=EMP(DB.cur),a=A(t),s=st(t);
  return`<div class="card prof">${av(e)}<div><b>${esc(e.name||'أدخل بيانات الموظف من تبويب الموظفون')}</b><div class="mut">${esc(e.title)}${e.spec?' · '+esc(e.spec):''}${e.phone?' · '+esc(e.phone):''}</div></div></div>
  <h2>حضور اليوم</h2><div class="card"><div id="gps" class="gps"></div><p>الحالة: <span class="tag ${tagc(s)}">${s||'لم يُسجَّل بعد'}</span> ${a?`<span class="mut">دخول ${a.in}${a.out?' · خروج '+a.out:''}</span>`:''}${ot(t)?` <span class="tag wip">تعويضي اليوم ${ot(t)} ساعة</span>`:''}</p>
@@ -188,11 +193,11 @@ rep(){const[a,b,lb]=range(),T=mine('tasks').filter(x=>x.d>=a&&x.d<=b),D=mine('du
  <div class="row" style="margin-top:12px"><button class="btn gold" onclick="exportX()">حفظ بصيغة Excel</button><button class="btn" onclick="exportW()">حفظ بصيغة Word</button></div>
  <p class="mut">التقرير الكامل: بطاقة الموظف وصورته، المهام، الواجبات، الحضور والغياب، الإجازات، التعويضيات، والرصيد بمعادلات، بقالب منظم وشعار.</p></div>`},
 emp(){if(!isAdmin())return'<div class="card empty">هذه الشاشة للمدير الرئيسي فقط</div>';const f=EF;
- return`<h2>الموظفون</h2><div class="card"><b>الصلاحيات</b><p class="mut">الأدمن الرئيسي (أنت): كل الصلاحيات والتعديلات. الموظف: دخول باسمه وكلمة مروره، يسجّل حضوره ومهامه وواجباته ويرى رصيده وتقاريره فقط، دون أي صلاحية تعديل أو إعدادات.</p><p class="mut">لكل موظف: أضف اسم مستخدم وكلمة مرور (تعديل)، ثم اضغط «حزمة الدخول» وأرسلها له ليستوردها على هاتفه. ولاستلام بياناته منه استخدم الزر أدناه.</p><button class="btn gold" style="width:100%" onclick="impRecs()">استيراد بيانات موظف من جهازه</button></div>${f?`<div class="card"><b>${f.id?'تعديل موظف':'إضافة موظف'}</b><div class="prof" style="margin:8px 0"><span id="pv">${av(f)}</span><span class="pk btn gold">من المعرض<input type="file" accept="image/*" onchange="photoUp(this)"></span><span class="pk btn">بالكاميرا<input type="file" accept="image/*" capture="user" onchange="photoUp(this)"></span></div>
- <label>الاسم</label><input id="fn" value="${esc(f.name)}"><label>العنوان الوظيفي</label><input id="ft" value="${esc(f.title)}"><label>الاختصاص</label><input id="fs" value="${esc(f.spec)}"><label>رقم الهاتف</label><input id="fp" dir="ltr" value="${esc(f.phone)}"><label>اسم مستخدم لدخول الموظف (اختياري)</label><input id="fu" dir="ltr" autocomplete="off" value="${esc(f.user||'')}"><label>كلمة مرور الموظف ${f.h?'(اتركها فارغة للإبقاء)':''}</label><input id="fpw" type="password" dir="ltr" autocomplete="new-password">
- <div class="row"><button class="btn" onclick="saveEmp()">حفظ</button><button class="btn ghost" onclick="EF=null;render()">إلغاء</button></div></div>`:`<button class="btn" style="width:100%;margin-bottom:12px" onclick="EF={id:'',name:'',title:'',spec:'',phone:'',photo:'',user:'',h:''};render()">+ إضافة موظف</button>`}
+ return`<h2>الموظفون</h2><div class="card"><b>الصلاحيات</b><p class="mut">الأدمن الرئيسي (أنت): كل الصلاحيات. الموظف: يدخل باسمه وكلمة مروره، يسجّل حضوره ومهامه وواجباته ويرى رصيده وتقاريره فقط، دون أي تعديل أو إعدادات. كل البيانات تصلك تلقائياً من السحابة.</p><p class="mut">لإنشاء حساب موظف: عبّئ اسم مستخدم (إنجليزي) وكلمة مرور (6 أحرف فأكثر) في «إضافة/تعديل موظف».</p></div>${f?`<div class="card"><b>${f.id?'تعديل موظف':'إضافة موظف'}</b><div class="prof" style="margin:8px 0"><span id="pv">${av(f)}</span><span class="pk btn gold">من المعرض<input type="file" accept="image/*" onchange="photoUp(this)"></span><span class="pk btn">بالكاميرا<input type="file" accept="image/*" capture="user" onchange="photoUp(this)"></span></div>
+ <label>الاسم</label><input id="fn" value="${esc(f.name)}"><label>العنوان الوظيفي</label><input id="ft" value="${esc(f.title)}"><label>الاختصاص</label><input id="fs" value="${esc(f.spec)}"><label>رقم الهاتف</label><input id="fp" dir="ltr" value="${esc(f.phone)}"><label>اسم مستخدم لدخول الموظف (حروف إنجليزية وأرقام، اختياري)</label><input id="fu" dir="ltr" autocomplete="off" value="${esc(f.user||'')}"><label>كلمة مرور الموظف ${f.user?'(الحساب موجود. لتغيير كلمة المرور أنشئ اسم مستخدم جديداً)':'(6 أحرف فأكثر)'}</label><input id="fpw" type="password" dir="ltr" autocomplete="new-password">
+ <div class="row"><button class="btn" onclick="saveEmp()">حفظ</button><button class="btn ghost" onclick="EF=null;render()">إلغاء</button></div></div>`:`<button class="btn" style="width:100%;margin-bottom:12px" onclick="EF={id:'',name:'',title:'',spec:'',phone:'',photo:'',user:'',uid:''};render()">+ إضافة موظف</button>`}
  ${DB.emps.map(e=>`<div class="card"><div class="prof">${av(e)}<div><b>${esc(e.name||'—')}</b>${e.id===DB.cur?' <span class="tag ok">الحالي</span>':''}${e.user?' <span class="tag">حساب: '+esc(e.user)+'</span>':' <span class="tag bad">بلا حساب دخول</span>'}<div class="mut">${esc(e.title)}${e.spec?' · '+esc(e.spec):''}${e.phone?' · '+esc(e.phone):''}</div></div></div>
- <div class="row" style="margin-top:8px"><button class="btn sm" onclick="DB.cur='${e.id}';save();render()">اختيار</button><button class="btn sm ghost" onclick="EF={...EMP('${e.id}')};render()">تعديل</button><button class="btn sm ghost" onclick="sendPack('${e.id}')">حزمة الدخول</button><button class="btn sm ghost" onclick="delEmp('${e.id}')">حذف</button><button class="btn sm gold" onclick="fullRep('${e.id}','x')">تقرير Excel</button><button class="btn sm gold" onclick="fullRep('${e.id}','w')">تقرير Word</button></div></div>`).join('')}`},
+ <div class="row" style="margin-top:8px"><button class="btn sm" onclick="DB.cur='${e.id}';save();render()">اختيار</button><button class="btn sm ghost" onclick="EF={...EMP('${e.id}')};render()">تعديل</button><button class="btn sm ghost" onclick="delEmp('${e.id}')">حذف</button><button class="btn sm gold" onclick="fullRep('${e.id}','x')">تقرير Excel</button><button class="btn sm gold" onclick="fullRep('${e.id}','w')">تقرير Word</button></div></div>`).join('')}`},
 set(){if(!isAdmin())return'<div class="card empty">الإعدادات للمدير الرئيسي فقط</div>';const c=DB.cfg;const n=(k,l,t='number',s='')=>`<div><label>${l}</label><input type="${t}" ${s} value="${c[k]}" onchange="DB.cfg.${k}=${t==='number'?'+this.value':'this.value'};save()"></div>`;
  return`<h2>الإعدادات</h2><div class="card"><b>الحصص والدوام</b><div class="row">${n('lq','الإجازات الشهرية','number','min=0')}${n('hq','الساعات الزمنية الشهرية','number','min=0')}${n('cap','سقف التعويضي اليومي (ساعة)','number','min=0')}${n('end','نهاية الدوام الرسمي','time')}</div>${n('start','تاريخ بدء احتساب الحضور','date')}
  <label>أيام العطلة الأسبوعية</label><div class="row">${DN.map((d,i)=>`<label style="flex:0;white-space:nowrap"><input type="checkbox" style="width:auto" ${c.wk.includes(i)?'checked':''} onchange="togWk(${i})"> ${d}</label>`).join('')}</div>
@@ -201,8 +206,8 @@ set(){if(!isAdmin())return'<div class="card empty">الإعدادات للمدي
  <div class="row" style="margin-top:8px"><div><label>خط العرض</label><input id="la" dir="ltr" value="${c.lat??''}"></div><div><label>خط الطول</label><input id="lo" dir="ltr" value="${c.lng??''}"></div><div><label>النطاق (متر)</label><input id="rr" dir="ltr" value="${c.r}"></div></div><label>أو الصق إحداثيات من خرائط جوجل</label><input dir="ltr" placeholder="33.3152, 44.3661" oninput="pasteLL(this.value)"><button class="btn" onclick="saveHQ()">حفظ</button>
  <label style="display:block;margin-top:10px"><input type="checkbox" style="width:auto" ${c.auto?'checked':''} onchange="DB.cfg.auto=this.checked;save()"> تسجيل الحضور تلقائياً عند الوصول لنطاق المقر</label><label style="display:block;margin-top:6px"><input type="checkbox" style="width:auto" ${c.manual?'checked':''} onchange="DB.cfg.manual=this.checked;save()"> السماح بالتسجيل اليدوي عند تعذّر GPS (يُعلَّم في التقارير)</label></div>
  <div class="card"><b>العطل الرسمية</b><div class="row"><input type="date" id="hd"><button class="btn" style="flex:0" onclick="addH()">إضافة</button></div>${[...c.hol].sort().map(h=>`<span class="tag">${h} <a href="#" onclick="delH('${h}');return false">✕</a></span> `).join('')}</div>
- <div class="card"><b>بيانات دخول المدير الرئيسي</b><label>كلمة المرور الحالية</label><input id="cp" type="password" dir="ltr"><div class="row"><div><label>اسم مستخدم جديد</label><input id="nu" dir="ltr" value="${esc(DB.auth.u)}"></div><div><label>كلمة مرور جديدة</label><input id="np" type="password" dir="ltr"></div></div><button class="btn" onclick="chCred()">تحديث</button></div>
- <div class="card"><b>نسخة احتياطية</b><div class="row"><button class="btn" onclick="copyBackup()">نسخ البيانات</button><button class="btn ghost" onclick="restore()">استعادة من نص</button><button class="btn red" onclick="logout()">تسجيل الخروج</button></div></div>`}
+ <div class="card"><b>كلمة مرور المدير الرئيسي</b><label>الحالية</label><input id="cp" type="password" dir="ltr"><label>الجديدة (6 أحرف فأكثر)</label><input id="np" type="password" dir="ltr"><button class="btn" onclick="chPw()">تحديث</button></div>
+ <div class="card"><b>النسخ والحساب</b><p class="mut">البيانات محفوظة في السحابة (Firebase).</p><div class="row"><button class="btn gold" onclick="dlBackup()">حفظ نسخة JSON</button>${hasOld()?'<button class="btn" onclick="migrateLocal()">رفع بيانات قديمة من هذا الجهاز</button>':''}<button class="btn red" onclick="logout()">تسجيل الخروج</button></div></div>`}
 };
 // ---------- الإجراءات ----------
 function addT(d,tyId,xId,nId){const x=$(xId).value.trim();if(!x)return toast('اكتب المهمة');DB.tasks.push({id:uid(),e:DB.cur,d,ty:$(tyId).value,x,n:nId?$(nId).value.trim():''});save();render()}
@@ -220,21 +225,27 @@ function saveHQ(){if(!adm())return;const a=parseFloat($('la').value),b=parseFloa
 function addH(){if(!adm())return;const d=$('hd').value;if(d&&!DB.cfg.hol.includes(d)){DB.cfg.hol.push(d);save();render()}}
 function delH(h){if(!adm())return;DB.cfg.hol=DB.cfg.hol.filter(x=>x!==h);save();render()}
 function togWk(i){if(!adm())return;const w=DB.cfg.wk,j=w.indexOf(i);j<0?w.push(i):w.splice(j,1);save()}
-async function chCred(){if(!adm())return;const u=$('nu').value.trim(),p=$('np').value;if(await sha($('cp').value)!==DB.auth.h)return toast('كلمة المرور الحالية غير صحيحة');if(!u)return toast('أدخل اسم المستخدم');DB.auth.u=u;if(p)DB.auth.h=await sha(p);save();toast('تم تحديث بيانات الدخول')}
-async function restore(){if(!adm())return;const t=await ask('الصق نص النسخة الاحتياطية',{input:1,area:1});if(!t)return;try{const d=JSON.parse(t);if(!d.cfg||!d.emps||!d.auth)throw 0;DB=d;save();render()}catch(e){toast('النص غير صالح')}}
-async function copyBackup(){if(!adm())return;const t=JSON.stringify(DB);try{await navigator.clipboard.writeText(t);toast('تم نسخ البيانات')}catch(e){await ask('انسخ النص التالي كاملاً واحتفظ به:',{input:1,area:1,def:t,nocancel:1,ok:'إغلاق'})}}
+
+
+
 async function photoUp(i){const f=i.files&&i.files[0];if(!f||!EF)return;let img=null,url=null;
  try{try{img=await createImageBitmap(f,{imageOrientation:'from-image'})}catch(e){img=null}
   if(!img){url=URL.createObjectURL(f);img=await new Promise((ok,no)=>{const x=new Image();x.onload=()=>ok(x);x.onerror=no;x.src=url})}
   const w=img.width,h=img.height,q=Math.min(w,h),c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,240,240);g.drawImage(img,(w-q)/2,(h-q)/2,q,q,0,0,240,240);
   EF.photo=c.toDataURL('image/jpeg',.85);$('pv').innerHTML=av(EF);toast('تم اختيار الصورة، اضغط حفظ')}
  catch(e){toast('تعذّر قراءة الصورة. جرّب صورة JPG أو PNG')}finally{if(url)URL.revokeObjectURL(url);i.value=''}}
-async function saveEmp(){if(!adm())return;const n=$('fn').value.trim();if(!n)return toast('أدخل اسم الموظف');const u=$('fu').value.trim(),p=$('fpw').value;
- if(u&&(u===DB.auth.u||DB.emps.some(x=>x.user===u&&x.id!==EF.id)))return toast('اسم المستخدم مستخدم، اختر غيره');
- if(u&&!p&&!EF.h)return toast('أدخل كلمة مرور للموظف');if(p&&p.length<6)return toast('كلمة المرور 6 أحرف على الأقل');
- Object.assign(EF,{name:n,title:$('ft').value.trim(),spec:$('fs').value.trim(),phone:$('fp').value.trim(),user:u});if(!u)EF.h='';else if(p)EF.h=await sha(p);
- if(EF.id){DB.emps[DB.emps.findIndex(x=>x.id===EF.id)]=EF}else{EF.id=uid();DB.emps.push(EF);DB.cur=EF.id}EF=null;save();render()}
-async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته؟'))return;DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
+async function saveEmp(){if(!adm())return;const n=$('fn').value.trim();if(!n)return toast('أدخل اسم الموظف');const u=$('fu').value.trim().toLowerCase(),p=$('fpw').value;
+ if(u&&!UNRE.test(u))return toast('اسم المستخدم: 3 إلى 30 حرفاً إنجليزياً أو أرقاماً (. _ - مسموحة)');
+ if(u==='ddr5')return toast('هذا الاسم محجوز للمدير الرئيسي');
+ if(u&&u===EF.user&&p)return toast('لتغيير كلمة مرور حساب موجود اختر له اسم مستخدم جديداً (يتوقف الحساب القديم تلقائياً)');
+ const chg=!!u&&u!==(EF.user||'');
+ if(chg){if(!p||p.length<6)return toast('أدخل كلمة مرور من 6 أحرف فأكثر');if(DB.emps.some(x=>x.user===u&&x.id!==EF.id))return toast('اسم المستخدم مستخدم لدى موظف آخر')}
+ const isNew=!EF.id;if(isNew)EF.id=uid();Object.assign(EF,{name:n,title:$('ft').value.trim(),spec:$('fs').value.trim(),phone:$('fp').value.trim()});delete EF.h;
+ try{if(chg){const nu=await createAuth(u,p);if(EF.uid&&EF.uid!==nu)await fbDb.doc('uids/'+EF.uid).delete().catch(()=>{});await fbDb.doc('uids/'+nu).set({e:EF.id,u});EF.user=u;EF.uid=nu}
+  else if(!u&&EF.user){if(EF.uid)await fbDb.doc('uids/'+EF.uid).delete().catch(()=>{});EF.user='';EF.uid=''}}
+ catch(er){if(isNew)EF.id='';return toast(er.code==='auth/email-already-in-use'?'اسم المستخدم محجوز في السحابة، اختر غيره':authMsg(er))}
+ const i=DB.emps.findIndex(x=>x.id===EF.id);if(i>=0)DB.emps[i]=EF;else{DB.emps.push(EF);DB.cur=EF.id}EF=null;save();render()}
+async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته نهائياً من السحابة؟'))return;const e=EMP(id);if(e.uid)fbDb.doc('uids/'+e.uid).delete().catch(()=>{});DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
 function range(){if(R.k==='week'){const a=wk(R.d),b=addD(a,6);return[a,b,'الأسبوع من '+a+' إلى '+b]}const m=mk(R.d);return[m+'-01',ld(new Date(+m.slice(0,4),+m.slice(5,7),0)),'شهر '+ML(m)]}
 function fullRep(id,k){DB.cur=id;R={k:'month',d:today()};save();k==='x'?exportX():exportW()}
 async function saveFile(req){let dl=null;try{dl=window.claude?await window.claude.use('downloads'):null}catch(e){}if(dl)return dl.save(req);if(window.claude)throw{code:'unavailable'};
@@ -257,77 +268,4 @@ async function exportX(){
  const cn=(n,s)=>`COUNTIFS(${AR('B')},"${ML(m)}",${AR('D')},"${s}")`;
  const rows=[['عدد المهام في الفترة',{formula:`COUNTA('المهام'!$E$7:$E$${Math.max(6+T.length,7)})`,result:T.length}],['عدد الواجبات في الفترة',{formula:`COUNTA('الواجبات'!$D$7:$D$${Math.max(6+D.length,7)})`,result:D.length}],
   ['أيام الحضور خلال الشهر',{formula:`${cn(0,'حاضر')}+${cn(0,'حاضر في عطلة')}`,result:S.pres}],['الإجازات المستخدمة',{formula:`'الرصيد'!B${row}`,result:S.lu}],['الإجازات المتبقية',{formula:`'الرصيد'!C${row}`,result:DB.cfg.lq-S.lu}],['الساعات الزمنية المستخدمة',{formula:`'الرصيد'!D${row}`,result:S.hu}],['الساعات الزمنية المتبقية',{formula:`'الرصيد'!E${row}`,result:DB.cfg.hq-S.hu}],['أيام الغياب',{formula:`'الرصيد'!F${row}`,result:S.ab}],['تعويضية أيام العطل (مكتسبة)',{formula:`'الرصيد'!G${row}`,result:S.ce}],['تعويضي مستخدم (أيام)',{formula:`'الرصيد'!H${row}`,result:S.cu}],['رصيد التعويضي (أيام)',{formula:`'الرصيد'!I${row}`,result:S.cb}],['ساعات تعويضية بعد الدوام (الشهر)',{formula:`'الرصيد'!J${row}`,result:S.oh}],['إجمالي الساعات التعويضية',{formula:`'الرصيد'!K${row}`,result:S.ot}]];
- tbl(cv,12,['البند','القيمة'],rows,null,2);
- // المهام والواجبات
- top(wt,'سجل المهام',E.name+' — '+lb,6,[14,12,14,18,44,26]);tbl(wt,6,['التاريخ','اليوم','بداية الأسبوع','نوع المهمة','المهمة','ملاحظات'],T.map(x=>[x.d,DN[pd(x.d).getDay()],wk(x.d),x.ty,x.x,x.n]));
- top(wd,'سجل الواجبات',E.name+' — '+lb,5,[14,12,14,44,26]);tbl(wd,6,['التاريخ','اليوم','بداية الأسبوع','الواجب','ملاحظات'],D.map(x=>[x.d,DN[pd(x.d).getDay()],wk(x.d),x.x,x.n]));
- // الحضور
- top(wa,'سجل الحضور والغياب',E.name,10,[14,16,12,18,10,10,14,16,16,14]);
- const tv=s=>s?tm(s)/1440:null;
- tbl(wa,6,['التاريخ','الشهر','اليوم','الحالة','الدخول','الخروج','ساعات العمل','ساعات الإجازة الزمنية','ساعات تعويضية بعد الدوام','طريقة التسجيل'],ALL.map((d,i)=>{const r=7+i,s=st(d,e),x=A(d,e)||{};return[d,ML(mk(d)),DN[pd(d).getDay()],s||'—',tv(x.in),tv(x.out),{formula:`IF(AND(E${r}<>"",F${r}<>""),ROUND((F${r}-E${r})*24,2),"")`,result:x.in&&x.out?+((tm(x.out)-tm(x.in))/60).toFixed(2):''},s==='إجازة زمنية'?+DB.lv[e+'|'+d].h:null,{formula:`IF(AND(D${r}="حاضر",F${r}<>""),ROUND(MIN('الرصيد'!$B$9,MAX(0,(F${r}-'الرصيد'!$B$8)*24)),2),0)`,result:ot(d,e)},x.in?(x.m?'يدوي':'GPS'):'']}),[0,0,0,0,'hh:mm','hh:mm',0,0,0,0]);
- // الرصيد
- top(wr,'الرصيد الشهري بالمعادلات',E.name,11,[22,12,12,12,14,14,14,12,14,14,16]);
- [['حصة الإجازات الشهرية',DB.cfg.lq],['حصة الساعات الزمنية الشهرية',DB.cfg.hq],['نهاية الدوام الرسمي (تعويضي بعدها)',tv(DB.cfg.end)],['سقف التعويضي اليومي (ساعة)',DB.cfg.cap]].forEach((x,i)=>{const r=6+i;let c=wr.getCell(r,1);c.value=x[0];c.font={bold:true,color:{argb:HC}};c.border=BD;c=wr.getCell(r,2);c.value=x[1];c.border=BD;c.alignment={horizontal:'center'};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF4D6'}};if(i===2)c.numFmt='hh:mm'});
- const k=(n,s)=>`COUNTIFS(${AR('B')},A${n},${AR('D')},"${s}")`;
- tbl(wr,11,['الشهر','إجازات مستخدمة','إجازات متبقية','ساعات زمنية مستخدمة','ساعات زمنية متبقية','أيام الغياب','تعويضية عطل (أيام)','تعويضي مستخدم (أيام)','رصيد التعويضي (أيام)','ساعات تعويضية (الشهر)','إجمالي الساعات التعويضية'],
-  ms.map((x,i)=>{const n=12+i,q=SM[i];return[ML(x),{formula:k(n,'إجازة'),result:q.lu},{formula:`$B$6-B${n}`,result:DB.cfg.lq-q.lu},{formula:`SUMIFS(${AR('H')},${AR('B')},A${n},${AR('D')},"إجازة زمنية")`,result:q.hu},{formula:`$B$7-D${n}`,result:DB.cfg.hq-q.hu},{formula:k(n,'غياب'),result:q.ab},{formula:`${k(n,'حاضر في عطلة')}+${k(n,'واجب في عطلة')}`,result:q.ce},{formula:k(n,'إجازة تعويضية'),result:q.cu},{formula:`SUM($G$12:G${n})-SUM($H$12:H${n})`,result:q.cb},{formula:`SUMIFS(${AR('I')},${AR('B')},A${n})`,result:q.oh},{formula:`SUM($J$12:J${n})`,result:q.ot}]}));
- try{await saveFile({filename:'تقرير_'+(E.name||'موظف')+'_'+(R.k==='week'?'أسبوعي_':'شهري_')+a+'.xlsx',data:await wb.xlsx.writeBuffer()});toast('تم حفظ ملف Excel')}catch(x){if(x.code!=='declined')toast('تعذّر حفظ الملف')}}
-
-// ---------- Word منسّق بالشعار ----------
-async function exportW(){
- if(!window.docx)return toast('تعذّر تحميل مكتبة Word');
- const{Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,AlignmentType,WidthType,ShadingType}=docx;
- const e=DB.cur,E=EMP(e),[a,b,lb]=range(),m=mk(a),S=stats(m,e),u8=s=>Uint8Array.from(atob(s.split(',')[1]),c=>c.charCodeAt(0));
- const P=(t,o={})=>new Paragraph({bidirectional:true,alignment:o.al||AlignmentType.START,spacing:{before:o.sp||0,after:80},children:[new TextRun({text:String(t),rightToLeft:true,bold:o.b,size:o.sz||22,color:o.c,font:'Arial'})]});
- const cell=(t,h)=>new TableCell({shading:h?{type:ShadingType.CLEAR,fill:'0B4F56',color:'auto'}:undefined,children:[P(t,{b:h,c:h?'FFFFFF':undefined,sz:19})]});
- const table=(hdr,rows)=>new Table({visuallyRightToLeft:true,width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({tableHeader:true,children:hdr.map(h=>cell(h,1))}),...rows.map(r=>new TableRow({children:r.map(v=>cell(v===undefined||v===''||v===null?'—':v))}))]});
- const H=t=>P(t,{b:1,sz:26,c:'0B4F56',sp:240});
- const T=mine('tasks').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d)),D=mine('duties').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d));
- const kids=[new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:u8(LOGO),type:'png',transformation:{width:100,height:100}})]}),P('المهندس — تقرير الموظف',{b:1,sz:34,c:'0B4F56',al:AlignmentType.CENTER}),P(lb,{al:AlignmentType.CENTER,c:'C69C3A',b:1})];
- if(E.photo)kids.push(new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:u8(E.photo),type:'jpg',transformation:{width:110,height:110}})]}));
- kids.push(table(['البيان','التفصيل'],[['الاسم',E.name],['العنوان الوظيفي',E.title],['الاختصاص',E.spec],['رقم الهاتف',E.phone]]));
- kids.push(H('ملخص الشهر — '+ML(m)),table(['البند','القيمة'],[['أيام الحضور',S.pres],['الإجازات المستخدمة / المتبقية',S.lu+' / '+(DB.cfg.lq-S.lu)],['الساعات الزمنية المستخدمة / المتبقية',S.hu+' / '+(+(DB.cfg.hq-S.hu).toFixed(2))],['أيام الغياب',S.ab],['تعويضية أيام العطل (مكتسبة)',S.ce],['تعويضي مستخدم (أيام)',S.cu],['رصيد التعويضي (أيام)',S.cb],['ساعات تعويضية بعد الدوام (الشهر)',S.oh],['إجمالي الساعات التعويضية',S.ot]]));
- kids.push(H('الواجبات المكلّف بها'),table(['التاريخ','اليوم','الواجب','ملاحظات'],D.map(x=>[x.d,DN[pd(x.d).getDay()],x.x,x.n])));
- kids.push(H('المهام المنجزة'),table(['التاريخ','النوع','المهمة','ملاحظات'],T.map(x=>[x.d,x.ty,x.x,x.n])));
- kids.push(H('سجل الحضور والغياب'),table(['التاريخ','اليوم','الحالة','الدخول','الخروج','تعويضي (س)'],daysOf(m).map(d=>{const x=A(d,e)||{};return[d,DN[pd(d).getDay()],st(d,e)||'—',x.in,x.out,ot(d,e)||'']})));
- kids.push(P('إعداد المهندس حسين الزيدي',{al:AlignmentType.CENTER,c:'5D7176',sp:300}));
- try{const doc=new Document({sections:[{properties:{page:{margin:{top:900,bottom:900,left:900,right:900}}},children:kids}]});await saveFile({filename:'تقرير_'+(E.name||'موظف')+'_'+m+'.docx',data:await Packer.toBlob(doc)});toast('تم حفظ ملف Word')}catch(x){if(x.code!=='declined')toast('تعذّر حفظ الملف')}}
-
-// ---------- حسابات الموظفين والمزامنة ----------
-const cl=o=>JSON.parse(JSON.stringify(o));
-const pickK=(o,id)=>Object.fromEntries(Object.entries(o).filter(([k])=>k.startsWith(id+'|')));
-const freshDev=()=>!DB.tasks.length&&!Object.keys(DB.att).length&&DB.emps.length===1&&!DB.emps[0].name&&!DB.emps[0].user;
-const okRec=r=>r&&typeof r.id==='string'&&typeof r.d==='string'&&typeof r.x==='string';
-function packFor(id){return JSON.stringify({t:'pack',v:1,cfg:cl(DB.cfg),emp:cl(EMP(id)),att:pickK(DB.att,id),lv:pickK(DB.lv,id),tasks:DB.tasks.filter(x=>x.e===id),duties:DB.duties.filter(x=>x.e===id)})}
-function recsOf(id){return JSON.stringify({t:'recs',v:1,eid:id,att:pickK(DB.att,id),tasks:DB.tasks.filter(x=>x.e===id),duties:DB.duties.filter(x=>x.e===id)})}
-async function shareTxt(msg,txt,fn){const r=await ask(msg,{input:1,area:1,def:txt,ok:'نسخ النص',alt:'حفظ كملف'});if(r===null)return;
- if(r==='ALT'){try{await saveFile({filename:fn,data:new Blob([txt],{type:'application/json'})});toast('تم حفظ الملف')}catch(e){if(e.code!=='declined')toast('تعذّر حفظ الملف')}return}
- try{await navigator.clipboard.writeText(txt);toast('تم نسخ النص، أرسله عبر واتساب أو غيره')}catch(e){toast('حدّد النص في الصندوق وانسخه يدوياً')}}
-function sendPack(id){if(!adm())return;const e=EMP(id);if(!e.user||!e.h)return toast('أضف اسم مستخدم وكلمة مرور للموظف أولاً (زر تعديل)');shareTxt('حزمة دخول الموظف «'+e.name+'». يستوردها على هاتفه من شاشة الدخول (لا تحتوي كلمة المرور الصريحة).',packFor(id),'حزمة_'+e.name+'.json')}
-function sendRecs(){if(!ME||isAdmin())return;shareTxt('بياناتك (حضور ومهام وواجبات) لإرسالها إلى المدير:',recsOf(ME),'بيانات_'+EMP(ME).name+'.json')}
-async function impRecs(){if(!adm())return;const t=await ask('الصق بيانات الموظف القادمة من جهازه',{input:1,area:1});if(!t)return;let p;try{p=JSON.parse(t)}catch(e){return toast('النص غير صالح')}
- if(!p||p.t!=='recs'||!DB.emps.some(x=>x.id===p.eid))return toast('هذه ليست بيانات موظف مسجّل لديك');
- let n=0;Object.entries(p.att||{}).forEach(([k,v])=>{if(!k.startsWith(p.eid+'|')||!v||typeof v.in!=='string')return;const c=DB.att[k];if(!c){DB.att[k]={in:v.in,out:typeof v.out==='string'?v.out:undefined,d:+v.d||0,m:v.m?1:undefined};n++}else if(!c.out&&typeof v.out==='string'){c.out=v.out;n++}});
- ['tasks','duties'].forEach(q=>(p[q]||[]).forEach(r=>{if(r.e===p.eid&&okRec(r)&&!DB[q].some(x=>x.id===r.id)){DB[q].push(r);n++}}));save();render();toast('تم استيراد '+n+' سجل جديد')}
-async function impPack(fresh){const t=await ask('الصق حزمة الدخول القادمة من المدير',{input:1,area:1});if(!t)return;let p;try{p=JSON.parse(t)}catch(e){return toast('النص غير صالح')}
- if(!p||p.t!=='pack'||!p.emp||!p.emp.id||!p.emp.user||!p.emp.h||!p.cfg)return toast('هذه ليست حزمة دخول صالحة');
- if(fresh){if(!freshDev())return toast('هذا الجهاز يحتوي بيانات، لا يمكن الاستيراد');if(!await askC('سيصبح هذا الجهاز جهاز الموظف «'+p.emp.name+'» ولن يعمل عليه دخول المدير. متابعة؟'))return;DB.emps=[];DB.auth={u:'ddr5',h:'locked'}}
- else if(ME!==p.emp.id)return toast('هذه الحزمة لموظف آخر');
- DB.cfg={...DB.cfg,...cl(p.cfg)};const i=DB.emps.findIndex(x=>x.id===p.emp.id);if(i<0)DB.emps.push(p.emp);else DB.emps[i]=p.emp;DB.cur=p.emp.id;const pre=p.emp.id+'|';
- Object.entries(p.att||{}).forEach(([k,v])=>{if(!k.startsWith(pre)||!v)return;const c=DB.att[k];DB.att[k]=(c&&c.out&&!v.out)?{...v,out:c.out}:v});
- Object.keys(DB.lv).filter(k=>k.startsWith(pre)).forEach(k=>delete DB.lv[k]);Object.entries(p.lv||{}).forEach(([k,v])=>{if(k.startsWith(pre))DB.lv[k]=v});
- ['tasks','duties'].forEach(q=>(p[q]||[]).forEach(r=>{if(r.e===p.emp.id&&okRec(r)&&!DB[q].some(x=>x.id===r.id))DB[q].push(r)}));
- save();toast(fresh?'تم الاستيراد، سجّل الدخول باسمك':'تم تحديث بياناتك');render()}
-async function chPw(){const e=EMP(ME);if(await sha($('cp').value)!==e.h)return toast('كلمة المرور الحالية غير صحيحة');const p=$('np').value;if(p.length<6)return toast('6 أحرف على الأقل');e.h=await sha(p);save();toast('تم تغيير كلمة المرور')}
-
-(async()=>{if(!DB.v||!DB.auth.h){DB.auth={u:'ddr5',h:await sha('300700900')};DB.v=2}save();
- try{const m=sessionStorage.getItem('mA');if(m==='admin'||(m&&DB.emps.some(x=>x.id===m&&x.user))){ME=m;if(m!=='admin')DB.cur=m}}catch(e){}
- authed=!!ME;render();if(authed)watch()})();
-
-if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
-let IP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e;$('hin').hidden=false});
-$('hin').onclick=async()=>{if(!IP)return;IP.prompt();try{await IP.userChoice}catch(e){}IP=null;$('hin').hidden=true};
-addEventListener('appinstalled',()=>{$('hin').hidden=true});
-</script>
-</body>
-</html>
+ tbl(
