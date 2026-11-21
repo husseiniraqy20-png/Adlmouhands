@@ -90,7 +90,8 @@ function sha256js(m){const r=(x,n)=>(x>>>n)|(x<<(32-n)),pr=[];for(let c=2;pr.len
   [a,q,c,d,e,f,g,h].forEach((v,i)=>H[i]=(H[i]+v)|0)}
  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('')}
 const sha=async s=>(window.crypto&&crypto.subtle)?[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join(''):sha256js(s);
-const firebaseConfig={apiKey:"AIzaSyDp9PrUAW02wr4YrjZN2oazl8IQ_k92S98",authDomain:"hashd-martyrs.firebaseapp.com",projectId:"hashd-martyrs",storageBucket:"hashd-martyrs.firebasestorage.app",messagingSenderId:"50676622106",appId:"1:50676622106:web:dc40b0392f114c18ce42a3",measurementId:"G-00QS55945M"};
+const firebaseConfig={apiKey:"AIzaSyDp9PrUAWG2wr4YrjZN2oazl8IQ_k9ZS98",authDomain:"hashd-martyrs.firebaseapp.com",projectId:"hashd-martyrs",storageBucket:"hashd-martyrs.firebasestorage.app",messagingSenderId:"50676622106",appId:"1:50676622106:web:dc40b0392f114c18ce42a3",measurementId:"G-G0QS5S945M"};
+
 const ADMIN_EMAIL='ddr5@hashd-martyrs.app',MAIL=u=>u.toLowerCase()+'@hashd-martyrs.app',UNRE=/^[a-z0-9._-]{3,30}$/;
 const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],cur:''});
 let DB=DEF(),authed=false,ready=false,fbDb=null,fbAuth=null,UNS=[],SYNC={},FIRST=new Set(),tSave=0,tR=0;
