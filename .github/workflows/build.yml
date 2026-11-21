@@ -26,7 +26,8 @@ jobs:
         run: |
           mkdir -p www
           cp *.html *.js *.json *.webmanifest *.png *.ico *.svg *.css www/ 2>/dev/null || true
-          npm install @capacitor/filesystem @capacitor/share
+          npm install @capacitor/filesystem@6 @capacitor/share@6
+
 
           npx cap init "تطبيق قسم الإعلام" "com.almuhandis.media" --web-dir www
           npx cap add android
