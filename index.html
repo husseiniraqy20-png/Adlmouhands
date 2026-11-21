@@ -40,7 +40,7 @@ h2{font-size:18px;color:var(--teal);margin:4px 0 12px;border-right:4px solid var
 .stat{text-align:center}.stat b{display:block;font-size:24px;color:var(--teal)}.stat span{color:var(--mut);font-size:13px}
 .stat.g b{color:var(--gold)}.stat.r b{color:var(--ruby)}
 nav{position:fixed;bottom:0;inset-inline:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
-nav button{flex:1;background:none;border:0;padding:8px 1px;color:var(--mut);font-size:11.5px;cursor:pointer}
+nav button{flex:1;background:none;border:0;padding:8px 1px;color:var(--mut);font-size:10.5px;cursor:pointer}
 nav button.on{color:var(--teal);font-weight:700;box-shadow:inset 0 3px var(--gold)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) nav button.on{color:var(--gold)}}
 nav i{display:block;font-style:normal;font-size:18px}
@@ -56,6 +56,7 @@ label{font-size:13px;color:var(--mut)}
 .gps{padding:8px 10px;border-radius:8px;background:var(--bg);margin-bottom:10px;font-size:14px}
 .login{max-width:380px;margin:6vh auto;text-align:center}.login img{width:150px;height:150px}
 .pk{position:relative;overflow:hidden;display:inline-block;flex:0 0 auto;margin:2px}.pk input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.bdg{background:var(--ruby);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-inline-start:3px}
 .credit{text-align:center;color:var(--mut);font-size:12px;margin:18px 0 6px}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 </style>
@@ -91,9 +92,8 @@ function sha256js(m){const r=(x,n)=>(x>>>n)|(x<<(32-n)),pr=[];for(let c=2;pr.len
  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('')}
 const sha=async s=>(window.crypto&&crypto.subtle)?[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join(''):sha256js(s);
 const firebaseConfig={apiKey:"AIzaSyDp9PrUAWG2wr4YrjZN2oazl8IQ_k9ZS98",authDomain:"hashd-martyrs.firebaseapp.com",projectId:"hashd-martyrs",storageBucket:"hashd-martyrs.firebasestorage.app",messagingSenderId:"50676622106",appId:"1:50676622106:web:dc40b0392f114c18ce42a3",measurementId:"G-G0QS5S945M"};
-
 const ADMIN_EMAIL='ddr5@hashd-martyrs.app',MAIL=u=>u.toLowerCase()+'@hashd-martyrs.app',UNRE=/^[a-z0-9._-]{3,30}$/;
-const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],cur:''});
+const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],reqs:[],cur:''});
 let DB=DEF(),authed=false,ready=false,fbDb=null,fbAuth=null,UNS=[],SYNC={},FIRST=new Set(),tSave=0,tR=0;
 const save=()=>cloudSave();
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
@@ -111,11 +111,11 @@ const hasDuty=(e,d)=>DB.duties.some(x=>x.e===e&&x.d===d);
 const st=(d,e=DB.cur)=>{const l=DB.lv[e+'|'+d],a=A(d,e);if(l)return l.t;if(off(d)){if(a&&a.in)return'حاضر في عطلة';if(hasDuty(e,d))return'واجب في عطلة';return'عطلة'}if(a&&a.in)return'حاضر';return d<today()?'غياب':''};
 function ot(d,e=DB.cur){const a=A(d,e);if(!a||!a.out||st(d,e)!=='حاضر')return 0;return +Math.min(DB.cfg.cap,Math.max(0,(tm(a.out)-tm(DB.cfg.end))/60)).toFixed(2)}
 const mk=d=>d.slice(0,7),wk=s=>addD(s,-pd(s).getDay());
-function months(){const r=[];let y=+DB.cfg.start.slice(0,4),m=+DB.cfg.start.slice(5,7);const c=mk(today());for(;;){const k=y+'-'+pad(m);r.push(k);if(k>=c)break;if(++m>12){m=1;y++}}return r}
-function daysOf(m){const a=m+'-01',l=ld(new Date(+m.slice(0,4),+m.slice(5,7),0)),s=a<DB.cfg.start?DB.cfg.start:a,e=l>today()?today():l,r=[];for(let d=s;d<=e;d=addD(d,1))r.push(d);return r}
-function stats(m,e=DB.cur){const r={lu:0,hu:0,ab:0,ce:0,cu:0,oh:0,pres:0};daysOf(m).forEach(d=>{const s=st(d,e);if(s==='إجازة')r.lu++;else if(s==='إجازة زمنية')r.hu+=+(DB.lv[e+'|'+d].h||0);else if(s==='غياب')r.ab++;else if(s==='حاضر في عطلة'||s==='واجب في عطلة')r.ce++;else if(s==='إجازة تعويضية')r.cu++;if(s==='حاضر'||s==='حاضر في عطلة')r.pres++;r.oh+=ot(d,e)});
+function months(){const r=[];let y=+DB.cfg.start.slice(0,4),m=+DB.cfg.start.slice(5,7);const c=[mk(today()),...Object.keys(DB.lv).map(k=>k.split('|')[1].slice(0,7))].sort().pop();for(;;){const k=y+'-'+pad(m);r.push(k);if(k>=c)break;if(++m>12){m=1;y++}}return r}
+function daysOf(m,emp=DB.cur){const a=m+'-01',l=ld(new Date(+m.slice(0,4),+m.slice(5,7),0)),s=a<DB.cfg.start?DB.cfg.start:a,e=l>today()?today():l,r=[];for(let d=s;d<=e;d=addD(d,1))r.push(d);Object.keys(DB.lv).forEach(k=>{const p=k.split('|');if(p[0]===emp&&p[1].slice(0,7)===m&&p[1]>today()&&p[1]>=DB.cfg.start&&!r.includes(p[1]))r.push(p[1])});return r.sort()}
+function stats(m,e=DB.cur){const r={lu:0,hu:0,ab:0,ce:0,cu:0,oh:0,pres:0};daysOf(m,e).forEach(d=>{const s=st(d,e);if(s==='إجازة')r.lu++;else if(s==='إجازة زمنية')r.hu+=+(DB.lv[e+'|'+d].h||0);else if(s==='غياب')r.ab++;else if(s==='حاضر في عطلة'||s==='واجب في عطلة')r.ce++;else if(s==='إجازة تعويضية')r.cu++;if(s==='حاضر'||s==='حاضر في عطلة')r.pres++;r.oh+=ot(d,e)});
  let ce=0,cu=0,oh=0;months().filter(x=>x<=m).forEach(x=>{const q=x===m?r:stats0(x,e);ce+=q.ce;cu+=q.cu;oh+=q.oh});r.cb=ce-cu;r.ot=+oh.toFixed(2);r.oh=+r.oh.toFixed(2);return r}
-function stats0(m,e){const r={ce:0,cu:0,oh:0};daysOf(m).forEach(d=>{const s=st(d,e);if(s==='حاضر في عطلة'||s==='واجب في عطلة')r.ce++;else if(s==='إجازة تعويضية')r.cu++;r.oh+=ot(d,e)});return r}
+function stats0(m,e){const r={ce:0,cu:0,oh:0};daysOf(m,e).forEach(d=>{const s=st(d,e);if(s==='حاضر في عطلة'||s==='واجب في عطلة')r.ce++;else if(s==='إجازة تعويضية')r.cu++;r.oh+=ot(d,e)});return r}
 function dist(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180,p=r(c-a),q=r(d-b),h=Math.sin(p/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(q/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 const tagc=s=>s==='حاضر'?'ok':s==='غياب'?'bad':(s.startsWith('إجازة')||s.includes('عطلة'))?'wip':'';
 const opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
@@ -148,14 +148,14 @@ function rec(k,d,man){if(!DB.cur)return toast('أضف موظفاً أولاً');
 
 // ---------- الواجهة ----------
 let view='today',BM=mk(today()),R={k:'month',d:today()},EF=null;
-const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
+const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['req','✉','الطلبات'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
 function render(){
  $('hl').src=LOGO;
  if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML=`<div class="card login"><img src="${LOGO}" alt="الشعار"><h2 style="border:0;padding:0;text-align:center">المهندس</h2><label>اسم المستخدم</label><input id="lu" autocomplete="username" dir="ltr"><label>كلمة المرور</label><input id="lp" type="password" autocomplete="current-password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button></div><div class="credit">إعداد المهندس حسين الزيدي</div>`;return}
  if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ تحميل البيانات من السحابة...</div>';return}if(!isAdmin()&&ME)DB.cur=ME;
  const hs=$('hs');hs.hidden=!isAdmin();$('hout').hidden=false;hs.innerHTML=DB.emps.map(e=>`<option value="${e.id}" ${e.id===DB.cur?'selected':''}>${esc(e.name||'موظف')}</option>`).join('');
  if((!isAdmin()&&(view==='emp'||view==='set'))||(isAdmin()&&view==='acc'))view='today';
- $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}</button>`).join('');
+ $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}${t[0]==='req'&&pc()?`<span class="bdg">${pc()}</span>`:''}</button>`).join('');
  $('v').innerHTML=V[view]()+'<div class="credit">إعداد المهندس حسين الزيدي</div>';
  if(view==='today')updGps();
 }
@@ -185,7 +185,7 @@ bal(){const m=BM,S=stats(m),c=DB.cfg;
  <div class="grid"><div class="card stat"><b>${c.lq-S.lu}</b><span>إجازات متبقية من ${c.lq}</span></div><div class="card stat g"><b>${+(c.hq-S.hu).toFixed(2)}</b><span>ساعات زمنية متبقية من ${c.hq}</span></div><div class="card stat r"><b>${S.ab}</b><span>أيام غياب</span></div><div class="card stat"><b>${S.ce}</b><span>تعويضية أيام العطل</span></div><div class="card stat g"><b>${S.cb}</b><span>رصيد التعويضي (أيام)</span></div><div class="card stat"><b>${S.oh}</b><span>ساعات تعويضية هذا الشهر</span></div></div>
  <p class="mut">إجمالي الساعات التعويضية المتراكمة: <b>${S.ot}</b> ساعة · التعويض بعد الساعة ${c.end} وبسقف ${c.cap} ساعات يومياً.</p></div>
  ${isAdmin()?`<div class="card"><b>تسجيل إجازة</b><div class="row"><div><label>التاريخ</label><input type="date" id="lvd" value="${today()}"></div><div><label>النوع</label><select id="lvt">${opt(LT)}</select></div><div><label>الساعات (للزمنية)</label><input type="number" id="lvh" step="0.5" min="0"></div></div><label>ملاحظة</label><input id="lvn"><button class="btn" onclick="addLv()">حفظ</button></div>`:''}
- <div class="card tbl"><table><tr><th>التاريخ</th><th>اليوم</th><th>الحالة</th><th>الدخول</th><th>الخروج</th><th>تعويضي (س)</th><th></th></tr>${daysOf(m).map(d=>{const a=A(d)||{},s=st(d),l=DB.lv[DB.cur+'|'+d];return`<tr><td>${d}</td><td>${DN[pd(d).getDay()]}</td><td><span class="tag ${tagc(s)}">${s||'—'}${s==='إجازة زمنية'?' ('+l.h+' س)':''}</span></td><td>${a.in||'—'}${a.m?' ⚑':''}</td><td>${a.out||'—'}</td><td>${ot(d)||'—'}</td><td>${isAdmin()?`<button class="btn ghost sm" onclick="editAtt('${d}')">تعديل</button>${l?` <button class="btn ghost sm" onclick="delLv('${d}')">إلغاء الإجازة</button>`:''}`:''}</td></tr>`}).join('')}</table></div>`},
+ <div class="card tbl"><table><tr><th>التاريخ</th><th>اليوم</th><th>الحالة</th><th>الدخول</th><th>الخروج</th><th>تعويضي (س)</th><th></th></tr>${daysOf(m).map(d=>{const a=A(d)||{},s=st(d),l=DB.lv[DB.cur+'|'+d];return`<tr><td>${d}</td><td>${DN[pd(d).getDay()]}</td><td><span class="tag ${tagc(s)}">${s||'—'}${s==='إجازة زمنية'?' ('+l.h+' س)':''}${l&&l.rq?' ✉':''}</span></td><td>${a.in||'—'}${a.m?' ⚑':''}</td><td>${a.out||'—'}</td><td>${ot(d)||'—'}</td><td>${isAdmin()?`<button class="btn ghost sm" onclick="editAtt('${d}')">تعديل</button>${l?` <button class="btn ghost sm" onclick="delLv('${d}')">إلغاء الإجازة</button>`:''}`:''}</td></tr>`}).join('')}</table></div>`},
 rep(){const[a,b,lb]=range(),T=mine('tasks').filter(x=>x.d>=a&&x.d<=b),D=mine('duties').filter(x=>x.d>=a&&x.d<=b),e=EMP(DB.cur);
  return`<h2>التقارير</h2><div class="card prof">${av(e)}<div><b>${esc(e.name||'—')}</b><div class="mut">${esc(e.title)}</div></div></div>
  <div class="card"><div class="row"><div><label>نوع التقرير</label><select onchange="R.k=this.value;render()"><option value="week" ${R.k==='week'?'selected':''}>أسبوعي</option><option value="month" ${R.k==='month'?'selected':''}>شهري (تقرير كامل)</option></select></div><div><label>يوم ضمن الفترة</label><input type="date" value="${R.d}" onchange="R.d=this.value||today();render()"></div></div>
@@ -193,6 +193,20 @@ rep(){const[a,b,lb]=range(),T=mine('tasks').filter(x=>x.d>=a&&x.d<=b),D=mine('du
  ${DB.cfg.types.map(x=>[x,T.filter(t=>t.ty===x).length]).filter(x=>x[1]).map(x=>`<span class="tag">${esc(x[0])}: ${x[1]}</span> `).join('')}
  <div class="row" style="margin-top:12px"><button class="btn gold" onclick="exportX()">حفظ بصيغة Excel</button><button class="btn" onclick="exportW()">حفظ بصيغة Word</button></div>
  <p class="mut">التقرير الكامل: بطاقة الموظف وصورته، المهام، الواجبات، الحضور والغياب، الإجازات، التعويضيات، والرصيد بمعادلات، بقالب منظم وشعار.</p></div>`},
+req(){const c=DB.cfg,tg=s=>s==='approved'?'<span class="tag ok">مقبول</span>':s==='rejected'?'<span class="tag bad">مرفوض</span>':'<span class="tag wip">قيد الانتظار</span>',
+  W=r=>r.t==='إجازة زمنية'?r.d+' · '+r.h+' ساعة':(r.d===r.d2?r.d:r.d+' ← '+r.d2)+' ('+reqDays(r).length+' يوم عمل)';
+ if(isAdmin()){const P=DB.reqs.filter(r=>r.st==='pending').sort((a,b)=>a.ts.localeCompare(b.ts)),H=DB.reqs.filter(r=>r.st!=='pending').sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,30);
+  const card=(r,btn)=>{const e=EMP(r.e),S=stats(mk(r.d),r.e);return`<div class="card"><div class="prof">${av(e)}<div><b>${esc(e.name||'—')}</b> ${tg(r.st)}<div class="mut">${esc(r.t)} · ${W(r)}</div>${r.n?`<div class="mut">السبب: ${esc(r.n)}</div>`:''}<div class="mut">قُدّم: ${esc(r.ts)}${r.an?' · ملاحظة المدير: '+esc(r.an):''}</div>${r.st==='pending'?`<div class="mut">رصيده: إجازات متبقية ${c.lq-S.lu} · ساعات زمنية ${+(c.hq-S.hu).toFixed(2)} · تعويضي ${S.cb}</div>`:''}</div></div>${btn}</div>`};
+  return`<h2>طلبات الإجازات (${P.length} بانتظار القرار)</h2>${P.map(r=>card(r,`<div class="row" style="margin-top:8px"><button class="btn" onclick="reqAct('${r.id}',true)">موافقة</button><button class="btn red" onclick="reqAct('${r.id}',false)">رفض</button></div>`)).join('')||'<div class="empty">لا توجد طلبات معلّقة</div>'}
+  <h2>آخر القرارات</h2>${H.map(r=>card(r,`<div class="row" style="margin-top:8px"><button class="btn ghost sm" style="flex:0" onclick="reqDel('${r.id}')">حذف من السجل</button></div>`)).join('')||'<div class="empty">لا توجد قرارات سابقة</div>'}`}
+ const S=stats(mk(today())),mineR=DB.reqs.filter(r=>r.e===ME).sort((a,b)=>b.ts.localeCompare(a.ts));
+ return`<h2>طلب إجازة</h2><div class="card"><p class="mut">رصيدك هذا الشهر: إجازات متبقية <b>${c.lq-S.lu}</b> · ساعات زمنية متبقية <b>${+(c.hq-S.hu).toFixed(2)}</b> · رصيد التعويضي <b>${S.cb}</b> يوم</p>
+ <label>نوع الطلب</label><select id="rt" onchange="reqUI()">${opt(LT,RT)}</select>
+ <div class="row"><div><label>${RT==='إجازة زمنية'?'التاريخ':'من تاريخ'}</label><input type="date" id="rd1" value="${today()}"></div><div id="rw2" style="${RT==='إجازة زمنية'?'display:none':''}"><label>إلى تاريخ</label><input type="date" id="rd2" value="${today()}"></div></div>
+ <div id="rwh" style="${RT==='إجازة زمنية'?'':'display:none'}"><label>عدد الساعات (حتى ${c.hq})</label><input type="number" id="rh" step="0.5" min="0.5" max="${c.hq}"></div>
+ <label>السبب / ملاحظة</label><input id="rn"><button class="btn" onclick="reqSubmit()">إرسال الطلب إلى المدير</button>
+ <p class="mut">تُحتسب أيام العمل فقط (دون العطل). عند موافقة المدير تُضاف الإجازة إلى جدول رصيدك تلقائياً.</p></div>
+ <h2>طلباتي</h2>${mineR.map(r=>`<div class="card"><div class="row" style="align-items:center"><div><b>${esc(r.t)}</b> ${tg(r.st)}<div class="mut">${W(r)}${r.n?' · '+esc(r.n):''}</div><div class="mut">قُدّم: ${esc(r.ts)}${r.an?' · ملاحظة المدير: '+esc(r.an):''}</div></div>${r.st==='pending'?`<button class="btn ghost sm" style="flex:0" onclick="reqCancel('${r.id}')">إلغاء الطلب</button>`:''}</div></div>`).join('')||'<div class="empty">لم تقدّم أي طلب بعد</div>'}`},
 emp(){if(!isAdmin())return'<div class="card empty">هذه الشاشة للمدير الرئيسي فقط</div>';const f=EF;
  return`<h2>الموظفون</h2><div class="card"><b>الصلاحيات</b><p class="mut">الأدمن الرئيسي (أنت): كل الصلاحيات. الموظف: يدخل باسمه وكلمة مروره، يسجّل حضوره ومهامه وواجباته ويرى رصيده وتقاريره فقط، دون أي تعديل أو إعدادات. كل البيانات تصلك تلقائياً من السحابة.</p><p class="mut">لإنشاء حساب موظف: عبّئ اسم مستخدم (إنجليزي) وكلمة مرور (6 أحرف فأكثر) في «إضافة/تعديل موظف».</p></div>${f?`<div class="card"><b>${f.id?'تعديل موظف':'إضافة موظف'}</b><div class="prof" style="margin:8px 0"><span id="pv">${av(f)}</span><span class="pk btn gold">من المعرض<input type="file" accept="image/*" onchange="photoUp(this)"></span><span class="pk btn">بالكاميرا<input type="file" accept="image/*" capture="user" onchange="photoUp(this)"></span></div>
  <label>الاسم</label><input id="fn" value="${esc(f.name)}"><label>العنوان الوظيفي</label><input id="ft" value="${esc(f.title)}"><label>الاختصاص</label><input id="fs" value="${esc(f.spec)}"><label>رقم الهاتف</label><input id="fp" dir="ltr" value="${esc(f.phone)}"><label>اسم مستخدم لدخول الموظف (حروف إنجليزية وأرقام، اختياري)</label><input id="fu" dir="ltr" autocomplete="off" value="${esc(f.user||'')}"><label>كلمة مرور الموظف ${f.user?'(الحساب موجود. لتغيير كلمة المرور أنشئ اسم مستخدم جديداً)':'(6 أحرف فأكثر)'}</label><input id="fpw" type="password" dir="ltr" autocomplete="new-password">
@@ -246,12 +260,10 @@ async function saveEmp(){if(!adm())return;const n=$('fn').value.trim();if(!n)ret
   else if(!u&&EF.user){if(EF.uid)await fbDb.doc('uids/'+EF.uid).delete().catch(()=>{});EF.user='';EF.uid=''}}
  catch(er){if(isNew)EF.id='';return toast(er.code==='auth/email-already-in-use'?'اسم المستخدم محجوز في السحابة، اختر غيره':authMsg(er))}
  const i=DB.emps.findIndex(x=>x.id===EF.id);if(i>=0)DB.emps[i]=EF;else{DB.emps.push(EF);DB.cur=EF.id}EF=null;save();render()}
-async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته نهائياً من السحابة؟'))return;const e=EMP(id);if(e.uid)fbDb.doc('uids/'+e.uid).delete().catch(()=>{});DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
+async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته نهائياً من السحابة؟'))return;const e=EMP(id);if(e.uid)fbDb.doc('uids/'+e.uid).delete().catch(()=>{});DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties','reqs'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
 function range(){if(R.k==='week'){const a=wk(R.d),b=addD(a,6);return[a,b,'الأسبوع من '+a+' إلى '+b]}const m=mk(R.d);return[m+'-01',ld(new Date(+m.slice(0,4),+m.slice(5,7),0)),'شهر '+ML(m)]}
 function fullRep(id,k){DB.cur=id;R={k:'month',d:today()};save();k==='x'?exportX():exportW()}
 async function saveFile(req){let d=null;try{d=window.claude?await window.claude.use('downloads'):null}catch(e){}if(d&&typeof d.save==='function'){await d.save(req);return}const b=req.data instanceof Blob?req.data:new Blob([req.data],{type:req.mime||'application/octet-stream'});const Cap=window.Capacitor;if(Cap&&Cap.isNativePlatform&&Cap.isNativePlatform()){try{const P=Cap.Plugins||{};const call=(pl,m,a)=>P[pl]&&P[pl][m]?P[pl][m](a):Cap.nativePromise(pl,m,a);const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onloadend=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});const f=await call('Filesystem','writeFile',{path:req.filename,data:b64,directory:'CACHE'});await call('Share','share',{title:req.filename,url:f.uri});return}catch(err){alert('خطأ في التصدير: '+(err.message||JSON.stringify(err)));return}}const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=req.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
-
-
 
 // ---------- Excel منسّق بالشعار ----------
 async function exportX(){
@@ -261,7 +273,7 @@ async function exportX(){
  const top=(ws,title,sub,n,w)=>{ws.views=[{rightToLeft:true}];w.forEach((x,i)=>ws.getColumn(i+1).width=x);ws.addImage(lg,{tl:{col:0,row:0},ext:{width:84,height:84}});n=Math.max(n,3);ws.mergeCells(1,2,2,n);let c=ws.getCell(1,2);c.value=title;c.font={size:18,bold:true,color:{argb:HC}};c.alignment={vertical:'middle',horizontal:'center'};ws.mergeCells(3,2,3,n);c=ws.getCell(3,2);c.value=sub;c.font={size:11,color:{argb:'FF5D7176'}};c.alignment={horizontal:'center'};[30,30,24,6].forEach((h,i)=>ws.getRow(i+1).height=h);for(let i=1;i<=n;i++)ws.getCell(4,i).fill={type:'pattern',pattern:'solid',fgColor:{argb:GC}}};
  const tbl=(ws,r0,hdr,rows,fmt,c0=1)=>{hdr.forEach((h,i)=>{const c=ws.getCell(r0,c0+i);c.value=h;c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:HC}};c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=BD});rows.forEach((row,j)=>row.forEach((v,i)=>{const c=ws.getCell(r0+1+j,c0+i);c.value=v;c.border=BD;c.alignment={horizontal:'center',vertical:'middle',wrapText:true};if(fmt&&fmt[i])c.numFmt=fmt[i];if(j%2)c.fill=ZB}));return r0+Math.max(rows.length,1)};
  const T=mine('tasks').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d)),D=mine('duties').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d));
- const ALL=ms.flatMap(daysOf),aL=6+Math.max(ALL.length,1),AR=c=>`'الحضور'!$${c}$7:$${c}$${aL}`,row=12+ms.indexOf(m);
+ const ALL=ms.flatMap(x=>daysOf(x,e)),aL=6+Math.max(ALL.length,1),AR=c=>`'الحضور'!$${c}$7:$${c}$${aL}`,row=12+ms.indexOf(m);
  const cv=wb.addWorksheet('بطاقة الموظف'),wt=wb.addWorksheet('المهام'),wd=wb.addWorksheet('الواجبات'),wa=wb.addWorksheet('الحضور'),wr=wb.addWorksheet('الرصيد');
  // بطاقة الموظف
  top(cv,'تقرير الموظف',lb,4,[18,34,24,24]);
@@ -315,26 +327,26 @@ async function onUser(user){if(!user){authed=false;ME=null;unlisten();render();r
  catch(e){toast(e&&e.code==='unavailable'?'لا يوجد اتصال بالإنترنت':'هذا الحساب غير مفعّل لدى المدير');try{await fbAuth.signOut()}catch(_){}return}
  authed=true;view='today';listen();watch();render()}
 function unlisten(){UNS.forEach(f=>{try{f()}catch(e){}});UNS=[];ready=false;SYNC={};FIRST=new Set()}
-function fs(n){FIRST.add(n);if(FIRST.size>=6&&!ready){ready=true;if(isAdmin()&&!DB.emps.some(x=>x.id===DB.cur))DB.cur=(DB.emps[0]||{}).id||'';render();if(isAdmin())cloudSave()}}
+function fs(n){FIRST.add(n);if(FIRST.size>=7&&!ready){ready=true;if(isAdmin()&&!DB.emps.some(x=>x.id===DB.cur))DB.cur=(DB.emps[0]||{}).id||'';render();if(isAdmin())cloudSave()}}
 function put(n,id,d){if(n==='employees'){const i=DB.emps.findIndex(x=>x.id===id);if(i<0)DB.emps.push({...d});else DB.emps[i]={...d}}
  else if(n==='att'||n==='lv'){const{e,dt,...v}=d;DB[n][e+'|'+dt]=v}
- else if(n==='tasks'||n==='duties'){const i=DB[n].findIndex(x=>x.id===id);if(i<0)DB[n].push({...d});else DB[n][i]={...d}}
+ else if(n==='tasks'||n==='duties'||n==='reqs'){const i=DB[n].findIndex(x=>x.id===id);if(i<0)DB[n].push({...d});else DB[n][i]={...d}}
  else if(n==='cfg'){DB.cfg={...DEF().cfg,...d}}}
-function rm(n,id){if(n==='employees')DB.emps=DB.emps.filter(x=>x.id!==id);else if(n==='att'||n==='lv')delete DB[n][id];else if(n==='tasks'||n==='duties')DB[n]=DB[n].filter(x=>x.id!==id)}
+function rm(n,id){if(n==='employees')DB.emps=DB.emps.filter(x=>x.id!==id);else if(n==='att'||n==='lv')delete DB[n][id];else if(n==='tasks'||n==='duties'||n==='reqs')DB[n]=DB[n].filter(x=>x.id!==id)}
 function chg(n,s){s.docChanges().forEach(c=>{const p=n+'/'+c.doc.id;if(c.type==='removed'){delete SYNC[p];rm(n,c.doc.id)}else{SYNC[p]=sj(c.doc.data());put(n,c.doc.id,c.doc.data())}});fs(n);debRender()}
 function listen(){unlisten();DB=DEF();if(!isAdmin())DB.cur=ME;
  const col=n=>{const c=fbDb.collection(n);return isAdmin()?c:c.where('e','==',ME)},er=n=>e=>{toast('تعذّر قراءة '+n+' ('+((e&&e.code)||'')+')');fs(n)};
- ['att','tasks','duties','lv'].forEach(n=>UNS.push(col(n).onSnapshot(s=>chg(n,s),er(n))));
+ ['att','tasks','duties','lv','reqs'].forEach(n=>UNS.push(col(n).onSnapshot(s=>chg(n,s),er(n))));
  if(isAdmin())UNS.push(fbDb.collection('employees').onSnapshot(s=>chg('employees',s),er('employees')));
  else UNS.push(fbDb.doc('employees/'+ME).onSnapshot(s=>{const p='employees/'+ME;if(s.exists){SYNC[p]=sj(s.data());put('employees',ME,s.data())}else{delete SYNC[p];rm('employees',ME)}fs('employees');debRender()},er('employees')));
  UNS.push(fbDb.doc('cfg/main').onSnapshot(s=>{if(s.exists){SYNC['cfg/main']=sj(s.data());put('cfg','main',s.data())}fs('cfg');debRender()},er('cfg')))}
 function localDocs(){const m={};DB.emps.forEach(e=>{const d=nm(e);delete d.h;m['employees/'+e.id]=d});
  Object.entries(DB.att).forEach(([k,v])=>{const[e,dt]=k.split('|');m['att/'+k]=nm({...v,e,dt})});Object.entries(DB.lv).forEach(([k,v])=>{const[e,dt]=k.split('|');m['lv/'+k]=nm({...v,e,dt})});
- DB.tasks.forEach(t=>m['tasks/'+t.id]=nm(t));DB.duties.forEach(t=>m['duties/'+t.id]=nm(t));if(isAdmin())m['cfg/main']=nm(DB.cfg);return m}
+ DB.tasks.forEach(t=>m['tasks/'+t.id]=nm(t));DB.duties.forEach(t=>m['duties/'+t.id]=nm(t));DB.reqs.forEach(t=>m['reqs/'+t.id]=nm(t));if(isAdmin())m['cfg/main']=nm(DB.cfg);return m}
 function cloudSave(){if(!fbDb)return;clearTimeout(tSave);tSave=setTimeout(flush,250)}
 function wfail(p,e){delete SYNC[p];toast('تعذّر الحفظ في السحابة ('+((e&&e.code)||'')+')')}
 function flush(){if(!fbDb||!authed||!ready)return;const L=localDocs(),A_=isAdmin();
- Object.entries(L).forEach(([p,d])=>{if(!A_&&!/^(att|tasks|duties)\//.test(p))return;const x=sj(d);if(SYNC[p]!==x){SYNC[p]=x;fbDb.doc(p).set(d).catch(e=>wfail(p,e))}});
+ Object.entries(L).forEach(([p,d])=>{if(!A_&&!/^(att|tasks|duties|reqs)\//.test(p))return;const x=sj(d);if(SYNC[p]!==x){SYNC[p]=x;fbDb.doc(p).set(d).catch(e=>wfail(p,e))}});
  if(A_)Object.keys(SYNC).forEach(p=>{if(!(p in L)){delete SYNC[p];fbDb.doc(p).delete().catch(e=>wfail(p,e))}})}
 function debRender(){clearTimeout(tR);tR=setTimeout(()=>{const a=document.activeElement,v=$('v');if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&v&&v.contains&&v.contains(a)){tR=setTimeout(debRender,1500);return}render()},200)}
 async function createAuth(u,p){let sec;try{sec=firebase.app('sec')}catch(e){sec=firebase.initializeApp(firebaseConfig,'sec')}const c=await sec.auth().createUserWithEmailAndPassword(MAIL(u),p),id=c.user.uid;try{await sec.auth().signOut()}catch(e){}return id}
@@ -345,7 +357,36 @@ async function migrateLocal(){if(!adm())return;let o=null;try{o=JSON.parse(local
  Object.entries(o.att||{}).forEach(([k,v])=>{if(v&&!DB.att[k])DB.att[k]=v});Object.entries(o.lv||{}).forEach(([k,v])=>{if(v&&!DB.lv[k])DB.lv[k]=v});
  ['tasks','duties'].forEach(q=>(o[q]||[]).forEach(r=>{if(!DB[q].some(x=>x.id===r.id))DB[q].push(r)}));
  if(o.cfg)DB.cfg={...DB.cfg,...o.cfg};save();try{localStorage.setItem(KEY+'_old',localStorage.getItem(KEY));localStorage.removeItem(KEY)}catch(e){}toast('تم رفع البيانات إلى السحابة');render()}
-async function dlBackup(){if(!adm())return;try{await saveFile({filename:'نسخة_المهندس_'+today()+'.json',data:new Blob([JSON.stringify({cfg:DB.cfg,emps:DB.emps.map(({photo,...r})=>r),att:DB.att,lv:DB.lv,tasks:DB.tasks,duties:DB.duties})],{type:'application/json'})});toast('تم حفظ النسخة')}catch(e){if(e.code!=='declined')toast('تعذّر الحفظ')}}
+async function dlBackup(){if(!adm())return;try{await saveFile({filename:'نسخة_المهندس_'+today()+'.json',data:new Blob([JSON.stringify({cfg:DB.cfg,emps:DB.emps.map(({photo,...r})=>r),att:DB.att,lv:DB.lv,tasks:DB.tasks,duties:DB.duties,reqs:DB.reqs})],{type:'application/json'})});toast('تم حفظ النسخة')}catch(e){if(e.code!=='declined')toast('تعذّر الحفظ')}}
+// ---------- طلبات الإجازات والموافقة ----------
+let RT='إجازة';
+const pc=()=>isAdmin()?DB.reqs.filter(r=>r.st==='pending').length:0;
+const nowTs=()=>{const d=new Date();return ld(d)+' '+hm(d)};
+function reqDays(r){if(r.t==='إجازة زمنية')return[r.d];const o=[];for(let d=r.d;d<=(r.d2||r.d)&&o.length<400;d=addD(d,1))if(!off(d))o.push(d);return o}
+function reqUI(){RT=$('rt').value;const z=RT==='إجازة زمنية';$('rw2').style.display=z?'none':'';$('rwh').style.display=z?'':'none'}
+async function reqSubmit(){if(isAdmin()||!ME)return;const t=$('rt').value,d=$('rd1').value,z=t==='إجازة زمنية',d2=z?d:($('rd2').value||d),h=z?+$('rh').value:0,n=$('rn').value.trim();
+ if(!d)return toast('اختر التاريخ');if(d2<d)return toast('تاريخ النهاية قبل البداية');
+ if(z&&(!(h>0)||h>DB.cfg.hq))return toast('أدخل عدد الساعات (من 0.5 إلى '+DB.cfg.hq+')');
+ const r={id:uid(),e:ME,t,d,d2,h,n,st:'pending',ts:nowTs()},days=reqDays(r);
+ if(!days.length)return toast('لا توجد أيام عمل ضمن الفترة (كلها عطلة)');if(days.length>31)return toast('الحد الأقصى 31 يوم عمل للطلب الواحد');
+ if(DB.reqs.some(x=>x.e===ME&&x.st!=='rejected'&&x.d<=d2&&d<=x.d2))return toast('لديك طلب آخر متداخل مع هذه الفترة');
+ if(d<today()&&!await askC('التاريخ في الماضي. هل تريد تقديم الطلب؟'))return;
+ DB.reqs.push(r);save();toast('تم إرسال الطلب إلى المدير');render()}
+async function reqCancel(id){const r=DB.reqs.find(x=>x.id===id);if(!r||r.st!=='pending'||(!isAdmin()&&r.e!==ME))return;if(!await askC('إلغاء هذا الطلب؟'))return;
+ try{await fbDb.doc('reqs/'+id).delete()}catch(e){return toast('تعذّر الإلغاء ('+((e&&e.code)||'')+')')}DB.reqs=DB.reqs.filter(x=>x.id!==id);delete SYNC['reqs/'+id];render()}
+function reqDel(id){if(!adm())return;DB.reqs=DB.reqs.filter(x=>x.id!==id);save();render()}
+function reqOver(r,ds){const c=DB.cfg,pre=r.e+'|';for(const m of new Set(ds.map(mk))){const L=Object.entries(DB.lv).filter(([k,v])=>k.startsWith(pre+m));
+  if(r.t==='إجازة'&&L.filter(([k,v])=>v.t==='إجازة').length>c.lq)return'الإجازات الشهرية تتجاوز '+c.lq+' في '+ML(m);
+  if(r.t==='إجازة زمنية'&&L.filter(([k,v])=>v.t==='إجازة زمنية').reduce((a,[k,v])=>a+(+v.h||0),0)>c.hq)return'الساعات الزمنية تتجاوز '+c.hq+' في '+ML(m)}
+ if(r.t==='إجازة تعويضية'){const fut=Object.entries(DB.lv).filter(([k,v])=>k.startsWith(pre)&&v.t==='إجازة تعويضية'&&k.split('|')[1]>today()).length;if(stats(mk(today()),r.e).cb-fut<0)return'رصيد التعويضي غير كافٍ'}return''}
+async function reqAct(id,ok){if(!adm())return;const r=DB.reqs.find(x=>x.id===id);if(!r||r.st!=='pending')return;
+ if(ok){const ds=reqDays(r);if(!ds.length)return toast('لا توجد أيام عمل ضمن الفترة');const old={};
+  ds.forEach(d=>{const k=r.e+'|'+d;old[k]=DB.lv[k];DB.lv[k]={t:r.t,h:r.t==='إجازة زمنية'?r.h:0,n:r.n||'',rq:r.id}});
+  const msg=reqOver(r,ds),clash=Object.values(old).filter(Boolean).length;
+  if((msg||clash)&&!await askC((msg?'تنبيه: '+msg+'. ':'')+(clash?'يوجد تسجيل إجازة سابق في '+clash+' يوم وسيُستبدل. ':'')+'هل توافق رغم ذلك؟')){Object.entries(old).forEach(([k,v])=>{if(v)DB.lv[k]=v;else delete DB.lv[k]});return}
+  r.st='approved';r.an=r.an||'';toast('تمت الموافقة وأُضيفت إلى جدول الرصيد')}
+ else{const a=await askP('سبب الرفض (اختياري)','');if(a===null)return;r.st='rejected';r.an=a.trim();toast('تم رفض الطلب')}
+ r.dec=nowTs();save();BM=mk(r.d);render()}
 (function(){render();if(!fbInit()){toast('تعذّر تحميل Firebase. تحقق من الاتصال ثم أعد فتح التطبيق');return}fbAuth.onAuthStateChanged(onUser);addEventListener('offline',()=>toast('لا يوجد اتصال: تُحفظ بياناتك وتُرفع تلقائياً عند عودة الاتصال'));addEventListener('online',()=>toast('عاد الاتصال'))})();
 
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
