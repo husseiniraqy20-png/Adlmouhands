@@ -268,4 +268,88 @@ async function exportX(){
  const cn=(n,s)=>`COUNTIFS(${AR('B')},"${ML(m)}",${AR('D')},"${s}")`;
  const rows=[['عدد المهام في الفترة',{formula:`COUNTA('المهام'!$E$7:$E$${Math.max(6+T.length,7)})`,result:T.length}],['عدد الواجبات في الفترة',{formula:`COUNTA('الواجبات'!$D$7:$D$${Math.max(6+D.length,7)})`,result:D.length}],
   ['أيام الحضور خلال الشهر',{formula:`${cn(0,'حاضر')}+${cn(0,'حاضر في عطلة')}`,result:S.pres}],['الإجازات المستخدمة',{formula:`'الرصيد'!B${row}`,result:S.lu}],['الإجازات المتبقية',{formula:`'الرصيد'!C${row}`,result:DB.cfg.lq-S.lu}],['الساعات الزمنية المستخدمة',{formula:`'الرصيد'!D${row}`,result:S.hu}],['الساعات الزمنية المتبقية',{formula:`'الرصيد'!E${row}`,result:DB.cfg.hq-S.hu}],['أيام الغياب',{formula:`'الرصيد'!F${row}`,result:S.ab}],['تعويضية أيام العطل (مكتسبة)',{formula:`'الرصيد'!G${row}`,result:S.ce}],['تعويضي مستخدم (أيام)',{formula:`'الرصيد'!H${row}`,result:S.cu}],['رصيد التعويضي (أيام)',{formula:`'الرصيد'!I${row}`,result:S.cb}],['ساعات تعويضية بعد الدوام (الشهر)',{formula:`'الرصيد'!J${row}`,result:S.oh}],['إجمالي الساعات التعويضية',{formula:`'الرصيد'!K${row}`,result:S.ot}]];
- tbl(
+ tbl(cv,12,['البند','القيمة'],rows,null,2);
+ // المهام والواجبات
+ top(wt,'سجل المهام',E.name+' — '+lb,6,[14,12,14,18,44,26]);tbl(wt,6,['التاريخ','اليوم','بداية الأسبوع','نوع المهمة','المهمة','ملاحظات'],T.map(x=>[x.d,DN[pd(x.d).getDay()],wk(x.d),x.ty,x.x,x.n]));
+ top(wd,'سجل الواجبات',E.name+' — '+lb,5,[14,12,14,44,26]);tbl(wd,6,['التاريخ','اليوم','بداية الأسبوع','الواجب','ملاحظات'],D.map(x=>[x.d,DN[pd(x.d).getDay()],wk(x.d),x.x,x.n]));
+ // الحضور
+ top(wa,'سجل الحضور والغياب',E.name,10,[14,16,12,18,10,10,14,16,16,14]);
+ const tv=s=>s?tm(s)/1440:null;
+ tbl(wa,6,['التاريخ','الشهر','اليوم','الحالة','الدخول','الخروج','ساعات العمل','ساعات الإجازة الزمنية','ساعات تعويضية بعد الدوام','طريقة التسجيل'],ALL.map((d,i)=>{const r=7+i,s=st(d,e),x=A(d,e)||{};return[d,ML(mk(d)),DN[pd(d).getDay()],s||'—',tv(x.in),tv(x.out),{formula:`IF(AND(E${r}<>"",F${r}<>""),ROUND((F${r}-E${r})*24,2),"")`,result:x.in&&x.out?+((tm(x.out)-tm(x.in))/60).toFixed(2):''},s==='إجازة زمنية'?+DB.lv[e+'|'+d].h:null,{formula:`IF(AND(D${r}="حاضر",F${r}<>""),ROUND(MIN('الرصيد'!$B$9,MAX(0,(F${r}-'الرصيد'!$B$8)*24)),2),0)`,result:ot(d,e)},x.in?(x.m?'يدوي':'GPS'):'']}),[0,0,0,0,'hh:mm','hh:mm',0,0,0,0]);
+ // الرصيد
+ top(wr,'الرصيد الشهري بالمعادلات',E.name,11,[22,12,12,12,14,14,14,12,14,14,16]);
+ [['حصة الإجازات الشهرية',DB.cfg.lq],['حصة الساعات الزمنية الشهرية',DB.cfg.hq],['نهاية الدوام الرسمي (تعويضي بعدها)',tv(DB.cfg.end)],['سقف التعويضي اليومي (ساعة)',DB.cfg.cap]].forEach((x,i)=>{const r=6+i;let c=wr.getCell(r,1);c.value=x[0];c.font={bold:true,color:{argb:HC}};c.border=BD;c=wr.getCell(r,2);c.value=x[1];c.border=BD;c.alignment={horizontal:'center'};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF4D6'}};if(i===2)c.numFmt='hh:mm'});
+ const k=(n,s)=>`COUNTIFS(${AR('B')},A${n},${AR('D')},"${s}")`;
+ tbl(wr,11,['الشهر','إجازات مستخدمة','إجازات متبقية','ساعات زمنية مستخدمة','ساعات زمنية متبقية','أيام الغياب','تعويضية عطل (أيام)','تعويضي مستخدم (أيام)','رصيد التعويضي (أيام)','ساعات تعويضية (الشهر)','إجمالي الساعات التعويضية'],
+  ms.map((x,i)=>{const n=12+i,q=SM[i];return[ML(x),{formula:k(n,'إجازة'),result:q.lu},{formula:`$B$6-B${n}`,result:DB.cfg.lq-q.lu},{formula:`SUMIFS(${AR('H')},${AR('B')},A${n},${AR('D')},"إجازة زمنية")`,result:q.hu},{formula:`$B$7-D${n}`,result:DB.cfg.hq-q.hu},{formula:k(n,'غياب'),result:q.ab},{formula:`${k(n,'حاضر في عطلة')}+${k(n,'واجب في عطلة')}`,result:q.ce},{formula:k(n,'إجازة تعويضية'),result:q.cu},{formula:`SUM($G$12:G${n})-SUM($H$12:H${n})`,result:q.cb},{formula:`SUMIFS(${AR('I')},${AR('B')},A${n})`,result:q.oh},{formula:`SUM($J$12:J${n})`,result:q.ot}]}));
+ try{await saveFile({filename:'تقرير_'+(E.name||'موظف')+'_'+(R.k==='week'?'أسبوعي_':'شهري_')+a+'.xlsx',data:await wb.xlsx.writeBuffer()});toast('تم حفظ ملف Excel')}catch(x){if(x.code!=='declined')toast('تعذّر حفظ الملف')}}
+
+// ---------- Word منسّق بالشعار ----------
+async function exportW(){
+ if(!window.docx)return toast('تعذّر تحميل مكتبة Word');
+ const{Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun,AlignmentType,WidthType,ShadingType}=docx;
+ const e=DB.cur,E=EMP(e),[a,b,lb]=range(),m=mk(a),S=stats(m,e),u8=s=>Uint8Array.from(atob(s.split(',')[1]),c=>c.charCodeAt(0));
+ const P=(t,o={})=>new Paragraph({bidirectional:true,alignment:o.al||AlignmentType.START,spacing:{before:o.sp||0,after:80},children:[new TextRun({text:String(t),rightToLeft:true,bold:o.b,size:o.sz||22,color:o.c,font:'Arial'})]});
+ const cell=(t,h)=>new TableCell({shading:h?{type:ShadingType.CLEAR,fill:'0B4F56',color:'auto'}:undefined,children:[P(t,{b:h,c:h?'FFFFFF':undefined,sz:19})]});
+ const table=(hdr,rows)=>new Table({visuallyRightToLeft:true,width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({tableHeader:true,children:hdr.map(h=>cell(h,1))}),...rows.map(r=>new TableRow({children:r.map(v=>cell(v===undefined||v===''||v===null?'—':v))}))]});
+ const H=t=>P(t,{b:1,sz:26,c:'0B4F56',sp:240});
+ const T=mine('tasks').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d)),D=mine('duties').filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>x.d.localeCompare(y.d));
+ const kids=[new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:u8(LOGO),type:'png',transformation:{width:100,height:100}})]}),P('المهندس — تقرير الموظف',{b:1,sz:34,c:'0B4F56',al:AlignmentType.CENTER}),P(lb,{al:AlignmentType.CENTER,c:'C69C3A',b:1})];
+ if(E.photo)kids.push(new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:u8(E.photo),type:'jpg',transformation:{width:110,height:110}})]}));
+ kids.push(table(['البيان','التفصيل'],[['الاسم',E.name],['العنوان الوظيفي',E.title],['الاختصاص',E.spec],['رقم الهاتف',E.phone]]));
+ kids.push(H('ملخص الشهر — '+ML(m)),table(['البند','القيمة'],[['أيام الحضور',S.pres],['الإجازات المستخدمة / المتبقية',S.lu+' / '+(DB.cfg.lq-S.lu)],['الساعات الزمنية المستخدمة / المتبقية',S.hu+' / '+(+(DB.cfg.hq-S.hu).toFixed(2))],['أيام الغياب',S.ab],['تعويضية أيام العطل (مكتسبة)',S.ce],['تعويضي مستخدم (أيام)',S.cu],['رصيد التعويضي (أيام)',S.cb],['ساعات تعويضية بعد الدوام (الشهر)',S.oh],['إجمالي الساعات التعويضية',S.ot]]));
+ kids.push(H('الواجبات المكلّف بها'),table(['التاريخ','اليوم','الواجب','ملاحظات'],D.map(x=>[x.d,DN[pd(x.d).getDay()],x.x,x.n])));
+ kids.push(H('المهام المنجزة'),table(['التاريخ','النوع','المهمة','ملاحظات'],T.map(x=>[x.d,x.ty,x.x,x.n])));
+ kids.push(H('سجل الحضور والغياب'),table(['التاريخ','اليوم','الحالة','الدخول','الخروج','تعويضي (س)'],daysOf(m).map(d=>{const x=A(d,e)||{};return[d,DN[pd(d).getDay()],st(d,e)||'—',x.in,x.out,ot(d,e)||'']})));
+ kids.push(P('إعداد المهندس حسين الزيدي',{al:AlignmentType.CENTER,c:'5D7176',sp:300}));
+ try{const doc=new Document({sections:[{properties:{page:{margin:{top:900,bottom:900,left:900,right:900}}},children:kids}]});await saveFile({filename:'تقرير_'+(E.name||'موظف')+'_'+m+'.docx',data:await Packer.toBlob(doc)});toast('تم حفظ ملف Word')}catch(x){if(x.code!=='declined')toast('تعذّر حفظ الملف')}}
+
+// ---------- السحابة (Firebase Auth + Firestore) ----------
+const sj=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
+const nm=o=>JSON.parse(JSON.stringify(o));
+function fbInit(){if(fbDb)return true;if(!window.firebase)return false;try{firebase.initializeApp(firebaseConfig);fbAuth=firebase.auth();fbDb=firebase.firestore();try{fbDb.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}return true}catch(e){fbDb=null;return false}}
+async function onUser(user){if(!user){authed=false;ME=null;unlisten();render();return}
+ try{if(user.email===ADMIN_EMAIL)ME='admin';else{const s=await fbDb.doc('uids/'+user.uid).get();if(!s.exists)throw{code:'inactive'};ME=s.data().e}}
+ catch(e){toast(e&&e.code==='unavailable'?'لا يوجد اتصال بالإنترنت':'هذا الحساب غير مفعّل لدى المدير');try{await fbAuth.signOut()}catch(_){}return}
+ authed=true;view='today';listen();watch();render()}
+function unlisten(){UNS.forEach(f=>{try{f()}catch(e){}});UNS=[];ready=false;SYNC={};FIRST=new Set()}
+function fs(n){FIRST.add(n);if(FIRST.size>=6&&!ready){ready=true;if(isAdmin()&&!DB.emps.some(x=>x.id===DB.cur))DB.cur=(DB.emps[0]||{}).id||'';render();if(isAdmin())cloudSave()}}
+function put(n,id,d){if(n==='employees'){const i=DB.emps.findIndex(x=>x.id===id);if(i<0)DB.emps.push({...d});else DB.emps[i]={...d}}
+ else if(n==='att'||n==='lv'){const{e,dt,...v}=d;DB[n][e+'|'+dt]=v}
+ else if(n==='tasks'||n==='duties'){const i=DB[n].findIndex(x=>x.id===id);if(i<0)DB[n].push({...d});else DB[n][i]={...d}}
+ else if(n==='cfg'){DB.cfg={...DEF().cfg,...d}}}
+function rm(n,id){if(n==='employees')DB.emps=DB.emps.filter(x=>x.id!==id);else if(n==='att'||n==='lv')delete DB[n][id];else if(n==='tasks'||n==='duties')DB[n]=DB[n].filter(x=>x.id!==id)}
+function chg(n,s){s.docChanges().forEach(c=>{const p=n+'/'+c.doc.id;if(c.type==='removed'){delete SYNC[p];rm(n,c.doc.id)}else{SYNC[p]=sj(c.doc.data());put(n,c.doc.id,c.doc.data())}});fs(n);debRender()}
+function listen(){unlisten();DB=DEF();if(!isAdmin())DB.cur=ME;
+ const col=n=>{const c=fbDb.collection(n);return isAdmin()?c:c.where('e','==',ME)},er=n=>e=>{toast('تعذّر قراءة '+n+' ('+((e&&e.code)||'')+')');fs(n)};
+ ['att','tasks','duties','lv'].forEach(n=>UNS.push(col(n).onSnapshot(s=>chg(n,s),er(n))));
+ if(isAdmin())UNS.push(fbDb.collection('employees').onSnapshot(s=>chg('employees',s),er('employees')));
+ else UNS.push(fbDb.doc('employees/'+ME).onSnapshot(s=>{const p='employees/'+ME;if(s.exists){SYNC[p]=sj(s.data());put('employees',ME,s.data())}else{delete SYNC[p];rm('employees',ME)}fs('employees');debRender()},er('employees')));
+ UNS.push(fbDb.doc('cfg/main').onSnapshot(s=>{if(s.exists){SYNC['cfg/main']=sj(s.data());put('cfg','main',s.data())}fs('cfg');debRender()},er('cfg')))}
+function localDocs(){const m={};DB.emps.forEach(e=>{const d=nm(e);delete d.h;m['employees/'+e.id]=d});
+ Object.entries(DB.att).forEach(([k,v])=>{const[e,dt]=k.split('|');m['att/'+k]=nm({...v,e,dt})});Object.entries(DB.lv).forEach(([k,v])=>{const[e,dt]=k.split('|');m['lv/'+k]=nm({...v,e,dt})});
+ DB.tasks.forEach(t=>m['tasks/'+t.id]=nm(t));DB.duties.forEach(t=>m['duties/'+t.id]=nm(t));if(isAdmin())m['cfg/main']=nm(DB.cfg);return m}
+function cloudSave(){if(!fbDb)return;clearTimeout(tSave);tSave=setTimeout(flush,250)}
+function wfail(p,e){delete SYNC[p];toast('تعذّر الحفظ في السحابة ('+((e&&e.code)||'')+')')}
+function flush(){if(!fbDb||!authed||!ready)return;const L=localDocs(),A_=isAdmin();
+ Object.entries(L).forEach(([p,d])=>{if(!A_&&!/^(att|tasks|duties)\//.test(p))return;const x=sj(d);if(SYNC[p]!==x){SYNC[p]=x;fbDb.doc(p).set(d).catch(e=>wfail(p,e))}});
+ if(A_)Object.keys(SYNC).forEach(p=>{if(!(p in L)){delete SYNC[p];fbDb.doc(p).delete().catch(e=>wfail(p,e))}})}
+function debRender(){clearTimeout(tR);tR=setTimeout(()=>{const a=document.activeElement,v=$('v');if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&v&&v.contains&&v.contains(a)){tR=setTimeout(debRender,1500);return}render()},200)}
+async function createAuth(u,p){let sec;try{sec=firebase.app('sec')}catch(e){sec=firebase.initializeApp(firebaseConfig,'sec')}const c=await sec.auth().createUserWithEmailAndPassword(MAIL(u),p),id=c.user.uid;try{await sec.auth().signOut()}catch(e){}return id}
+async function chPw(){const p=$('np').value;if(p.length<6)return toast('كلمة المرور 6 أحرف على الأقل');try{const u=fbAuth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,$('cp').value));await u.updatePassword(p);toast('تم تغيير كلمة المرور');$('cp').value='';$('np').value=''}catch(e){toast(authMsg(e))}}
+const hasOld=()=>{try{return!!localStorage.getItem(KEY)}catch(e){return false}};
+async function migrateLocal(){if(!adm())return;let o=null;try{o=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!o||!o.emps)return toast('لا توجد بيانات قديمة');if(!await askC('رفع بيانات هذا الجهاز القديمة (موظفون وحضور ومهام) إلى السحابة؟ لا تُنقل حسابات الدخول القديمة.'))return;
+ (o.emps||[]).forEach(e=>{if(e.name&&!DB.emps.some(x=>x.id===e.id)){const{h,...r}=e;DB.emps.push({...r,user:'',uid:''})}});
+ Object.entries(o.att||{}).forEach(([k,v])=>{if(v&&!DB.att[k])DB.att[k]=v});Object.entries(o.lv||{}).forEach(([k,v])=>{if(v&&!DB.lv[k])DB.lv[k]=v});
+ ['tasks','duties'].forEach(q=>(o[q]||[]).forEach(r=>{if(!DB[q].some(x=>x.id===r.id))DB[q].push(r)}));
+ if(o.cfg)DB.cfg={...DB.cfg,...o.cfg};save();try{localStorage.setItem(KEY+'_old',localStorage.getItem(KEY));localStorage.removeItem(KEY)}catch(e){}toast('تم رفع البيانات إلى السحابة');render()}
+async function dlBackup(){if(!adm())return;try{await saveFile({filename:'نسخة_المهندس_'+today()+'.json',data:new Blob([JSON.stringify({cfg:DB.cfg,emps:DB.emps.map(({photo,...r})=>r),att:DB.att,lv:DB.lv,tasks:DB.tasks,duties:DB.duties})],{type:'application/json'})});toast('تم حفظ النسخة')}catch(e){if(e.code!=='declined')toast('تعذّر الحفظ')}}
+(function(){render();if(!fbInit()){toast('تعذّر تحميل Firebase. تحقق من الاتصال ثم أعد فتح التطبيق');return}fbAuth.onAuthStateChanged(onUser);addEventListener('offline',()=>toast('لا يوجد اتصال: تُحفظ بياناتك وتُرفع تلقائياً عند عودة الاتصال'));addEventListener('online',()=>toast('عاد الاتصال'))})();
+
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+let IP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e;$('hin').hidden=false});
+$('hin').onclick=async()=>{if(!IP)return;IP.prompt();try{await IP.userChoice}catch(e){}IP=null;$('hin').hidden=true};
+addEventListener('appinstalled',()=>{$('hin').hidden=true});
+</script>
+</body>
+</html>
