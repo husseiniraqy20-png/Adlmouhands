@@ -15,10 +15,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
-<script src="firebase-app-compat.js"></script>
-<script src="firebase-auth-compat.js"></script>
-<script src="firebase-firestore-compat.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{--teal:#0B4F56;--gold:#C69C3A;--ruby:#C81D25;--bg:#F4F7F8;--card:#fff;--tx:#17262a;--mut:#5d7176;--bd:#dbe4e6;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -40,8 +39,8 @@ h2{font-size:18px;color:var(--teal);margin:4px 0 12px;border-right:4px solid var
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .stat{text-align:center}.stat b{display:block;font-size:24px;color:var(--teal)}.stat span{color:var(--mut);font-size:13px}
 .stat.g b{color:var(--gold)}.stat.r b{color:var(--ruby)}
-nav{position:fixed;bottom:0;inset-inline:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
-nav button{flex:1;background:none;border:0;padding:8px 1px;color:var(--mut);font-size:10.5px;cursor:pointer}
+nav{position:fixed;bottom:0;inset-inline:0;background:var(--card);border-top:1px solid var(--bd);display:flex;overflow-x:auto;padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
+nav button{flex:1 0 54px;background:none;border:0;padding:8px 1px;color:var(--mut);font-size:10.5px;cursor:pointer}
 nav button.on{color:var(--teal);font-weight:700;box-shadow:inset 0 3px var(--gold)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) nav button.on{color:var(--gold)}}
 nav i{display:block;font-style:normal;font-size:18px}
@@ -94,7 +93,7 @@ function sha256js(m){const r=(x,n)=>(x>>>n)|(x<<(32-n)),pr=[];for(let c=2;pr.len
 const sha=async s=>(window.crypto&&crypto.subtle)?[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join(''):sha256js(s);
 const firebaseConfig={apiKey:"AIzaSyDp9PrUAWG2wr4YrjZN2oazl8IQ_k9ZS98",authDomain:"hashd-martyrs.firebaseapp.com",projectId:"hashd-martyrs",storageBucket:"hashd-martyrs.firebasestorage.app",messagingSenderId:"50676622106",appId:"1:50676622106:web:dc40b0392f114c18ce42a3",measurementId:"G-G0QS5S945M"};
 const ADMIN_EMAIL='ddr5@hashd-martyrs.app',MAIL=u=>u.toLowerCase()+'@hashd-martyrs.app',UNRE=/^[a-z0-9._-]{3,30}$/;
-const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],reqs:[],cur:''});
+const DEF=()=>({cfg:{lat:null,lng:null,r:100,start:today(),hol:[],lq:3,hq:7,end:'15:00',cap:6,wk:[5,6],auto:false,manual:false,types:[...TT0]},emps:[],att:{},lv:{},tasks:[],duties:[],reqs:[],ann:[],cur:''});
 let DB=DEF(),authed=false,ready=false,fbDb=null,fbAuth=null,UNS=[],SYNC={},FIRST=new Set(),tSave=0,tR=0;
 const save=()=>cloudSave();
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
@@ -149,14 +148,14 @@ function rec(k,d,man){if(!DB.cur)return toast('أضف موظفاً أولاً');
 
 // ---------- الواجهة ----------
 let view='today',BM=mk(today()),R={k:'month',d:today()},EF=null;
-const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['req','✉','الطلبات'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
+const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['req','✉','الطلبات'],['ann','📢','التبليغات'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
 function render(){
  $('hl').src=LOGO;
  if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML=`<div class="card login"><img src="${LOGO}" alt="الشعار"><h2 style="border:0;padding:0;text-align:center">المهندس</h2><label>اسم المستخدم</label><input id="lu" autocomplete="username" dir="ltr"><label>كلمة المرور</label><input id="lp" type="password" autocomplete="current-password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button></div><div class="credit">إعداد المهندس حسين الزيدي</div>`;return}
  if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ تحميل البيانات من السحابة...</div>';return}if(!isAdmin()&&ME)DB.cur=ME;
  const hs=$('hs');hs.hidden=!isAdmin();$('hout').hidden=false;hs.innerHTML=DB.emps.map(e=>`<option value="${e.id}" ${e.id===DB.cur?'selected':''}>${esc(e.name||'موظف')}</option>`).join('');
  if((!isAdmin()&&(view==='emp'||view==='set'))||(isAdmin()&&view==='acc'))view='today';
- $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}${t[0]==='req'&&pc()?`<span class="bdg">${pc()}</span>`:''}</button>`).join('');
+ $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}${bd(t[0])?`<span class="bdg">${bd(t[0])}</span>`:''}</button>`).join('');
  $('v').innerHTML=V[view]()+'<div class="credit">إعداد المهندس حسين الزيدي</div>';
  if(view==='today')updGps();
 }
@@ -170,7 +169,7 @@ acc(){const e=EMP(ME);return`<h2>حسابي</h2><div class="card prof">${av(e)}<
  <div class="card"><b>تغيير كلمة المرور</b><label>الحالية</label><input id="cp" type="password" dir="ltr"><label>الجديدة (6 أحرف فأكثر)</label><input id="np" type="password" dir="ltr"><button class="btn" onclick="chPw()">تحديث</button></div>
  <div class="card"><b>المزامنة</b><p class="mut">بياناتك تُحفظ في السحابة وتصل المدير تلقائياً. وإن انقطع الإنترنت تُحفظ على الجهاز وتُرفع عند عودة الاتصال.</p></div><button class="btn red" style="width:100%" onclick="logout()">تسجيل الخروج</button>`},
 today(){const t=today(),e=EMP(DB.cur),a=A(t),s=st(t);
- return`<div class="card prof">${av(e)}<div><b>${esc(e.name||'أدخل بيانات الموظف من تبويب الموظفون')}</b><div class="mut">${esc(e.title)}${e.spec?' · '+esc(e.spec):''}${e.phone?' · '+esc(e.phone):''}</div></div></div>
+ return`${annBanner()}<div class="card prof">${av(e)}<div><b>${esc(e.name||'أدخل بيانات الموظف من تبويب الموظفون')}</b><div class="mut">${esc(e.title)}${e.spec?' · '+esc(e.spec):''}${e.phone?' · '+esc(e.phone):''}</div></div></div>
  <h2>حضور اليوم</h2><div class="card"><div id="gps" class="gps"></div><p>الحالة: <span class="tag ${tagc(s)}">${s||'لم يُسجَّل بعد'}</span> ${a?`<span class="mut">دخول ${a.in}${a.out?' · خروج '+a.out:''}</span>`:''}${ot(t)?` <span class="tag wip">تعويضي اليوم ${ot(t)} ساعة</span>`:''}</p>
  <div class="row"><button class="btn" id="bin" onclick="punch('in')">تسجيل حضور</button><button class="btn red" id="bout" onclick="punch('out')">تسجيل انصراف</button></div>
  <p class="mut">يُحدَّد موقعك تلقائياً، ويُقبل التسجيل داخل ${DB.cfg.r} م من المقر. ما بعد الساعة ${DB.cfg.end} يُضاف لرصيدك تعويضياً (حتى ${DB.cfg.cap} ساعات).</p></div>
@@ -194,6 +193,14 @@ rep(){const[a,b,lb]=range(),T=mine('tasks').filter(x=>x.d>=a&&x.d<=b),D=mine('du
  ${DB.cfg.types.map(x=>[x,T.filter(t=>t.ty===x).length]).filter(x=>x[1]).map(x=>`<span class="tag">${esc(x[0])}: ${x[1]}</span> `).join('')}
  <div class="row" style="margin-top:12px"><button class="btn gold" onclick="exportX()">حفظ بصيغة Excel</button><button class="btn" onclick="exportW()">حفظ بصيغة Word</button></div>
  <p class="mut">التقرير الكامل: بطاقة الموظف وصورته، المهام، الواجبات، الحضور والغياب، الإجازات، التعويضيات، والرصيد بمعادلات، بقالب منظم وشعار.</p></div>`},
+ann(){const pt=p=>p>1?'<span class="tag bad">عاجل</span>':p>0?'<span class="tag wip">مهم</span>':'<span class="tag">عادي</span>';
+ if(isAdmin()){const G={};DB.ann.forEach(a=>(G[a.id]=G[a.id]||[]).push(a));const L=Object.values(G).sort((a,b)=>b[0].ts.localeCompare(a[0].ts));
+  return`<h2>إرسال تبليغ / توجيه</h2><div class="card"><label>العنوان (اختياري)</label><input id="at"><label>نص التبليغ</label><textarea id="ax" rows="4"></textarea><label>الأهمية</label><select id="ap"><option value="0">عادي</option><option value="1">مهم</option><option value="2">عاجل</option></select>
+ <label>المستلمون</label><div class="row">${DB.emps.map(e=>`<label style="flex:0;white-space:nowrap"><input type="checkbox" style="width:auto" id="ar_${e.id}" checked> ${esc(e.name||'موظف')}</label>`).join('')}</div>
+ <div class="row"><button class="btn ghost sm" onclick="annAll(true)">تحديد الكل</button><button class="btn ghost sm" onclick="annAll(false)">إلغاء التحديد</button></div><button class="btn" onclick="annSend()">إرسال التبليغ</button></div>
+ <h2>التبليغات المرسلة</h2>${L.map(g=>{const a=g[0],r=g.filter(x=>x.rd).length;return`<div class="card"><div class="row" style="align-items:center"><div><b>${esc(a.t||'تبليغ')}</b> ${pt(a.p)}<div class="mut">${esc(a.ts)} · اطّلع ${r} من ${g.length}</div></div><button class="btn ghost sm" style="flex:0" onclick="annDel('${a.id}')">حذف</button></div><p style="white-space:pre-wrap">${esc(a.x)}</p><div class="mut">${g.map(x=>esc(EMP(x.e).name||'—')+': '+(x.rd?'✓ '+esc(x.rd):'لم يطّلع')).join(' · ')}</div></div>`}).join('')||'<div class="empty">لا توجد تبليغات مرسلة</div>'}`}
+ const M=DB.ann.filter(a=>a.e===ME).sort((a,b)=>b.ts.localeCompare(a.ts));
+ return`<h2>تبليغات وتوجيهات المدير</h2>${M.map(a=>`<div class="card" style="${a.rd?'':'border:2px solid '+(a.p>1?'var(--ruby)':'var(--gold)')}"><div class="row" style="align-items:center"><div><b>${esc(a.t||'تبليغ')}</b> ${pt(a.p)} ${a.rd?'':'<span class="tag ok">جديد</span>'}<div class="mut">${esc(a.ts)}</div></div>${a.rd?'':`<button class="btn sm" style="flex:0" onclick="annRead('${a.id}')">تم الاطلاع</button>`}</div><p style="white-space:pre-wrap">${esc(a.x)}</p>${a.rd?`<div class="mut">اطّلعتَ عليه: ${esc(a.rd)}</div>`:''}</div>`).join('')||'<div class="empty">لا توجد تبليغات</div>'}`},
 req(){const c=DB.cfg,tg=s=>s==='approved'?'<span class="tag ok">مقبول</span>':s==='rejected'?'<span class="tag bad">مرفوض</span>':'<span class="tag wip">قيد الانتظار</span>',
   W=r=>r.t==='إجازة زمنية'?r.d+' · '+r.h+' ساعة':(r.d===r.d2?r.d:r.d+' ← '+r.d2)+' ('+reqDays(r).length+' يوم عمل)';
  if(isAdmin()){const P=DB.reqs.filter(r=>r.st==='pending').sort((a,b)=>a.ts.localeCompare(b.ts)),H=DB.reqs.filter(r=>r.st!=='pending').sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,30);
@@ -261,7 +268,7 @@ async function saveEmp(){if(!adm())return;const n=$('fn').value.trim();if(!n)ret
   else if(!u&&EF.user){if(EF.uid)await fbDb.doc('uids/'+EF.uid).delete().catch(()=>{});EF.user='';EF.uid=''}}
  catch(er){if(isNew)EF.id='';return toast(er.code==='auth/email-already-in-use'?'اسم المستخدم محجوز في السحابة، اختر غيره':authMsg(er))}
  const i=DB.emps.findIndex(x=>x.id===EF.id);if(i>=0)DB.emps[i]=EF;else{DB.emps.push(EF);DB.cur=EF.id}EF=null;save();render()}
-async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته نهائياً من السحابة؟'))return;const e=EMP(id);if(e.uid)fbDb.doc('uids/'+e.uid).delete().catch(()=>{});DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties','reqs'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
+async function delEmp(id){if(!adm())return;if(DB.emps.length<2)return toast('لا يمكن حذف آخر موظف');if(!await askC('حذف الموظف وكل سجلاته نهائياً من السحابة؟'))return;const e=EMP(id);if(e.uid)fbDb.doc('uids/'+e.uid).delete().catch(()=>{});DB.emps=DB.emps.filter(x=>x.id!==id);['tasks','duties','reqs','ann'].forEach(k=>DB[k]=DB[k].filter(x=>x.e!==id));[DB.att,DB.lv].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(id+'|'))delete o[k]}));if(DB.cur===id)DB.cur=DB.emps[0].id;save();render()}
 function range(){if(R.k==='week'){const a=wk(R.d),b=addD(a,6);return[a,b,'الأسبوع من '+a+' إلى '+b]}const m=mk(R.d);return[m+'-01',ld(new Date(+m.slice(0,4),+m.slice(5,7),0)),'شهر '+ML(m)]}
 function fullRep(id,k){DB.cur=id;R={k:'month',d:today()};save();k==='x'?exportX():exportW()}
 async function saveFile(req){let d=null;try{d=window.claude?await window.claude.use('downloads'):null}catch(e){}if(d&&typeof d.save==='function'){await d.save(req);return}const b=req.data instanceof Blob?req.data:new Blob([req.data],{type:req.mime||'application/octet-stream'});const Cap=window.Capacitor;if(Cap&&Cap.isNativePlatform&&Cap.isNativePlatform()){try{const P=Cap.Plugins||{};const call=(pl,m,a)=>P[pl]&&P[pl][m]?P[pl][m](a):Cap.nativePromise(pl,m,a);const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onloadend=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});const f=await call('Filesystem','writeFile',{path:req.filename,data:b64,directory:'CACHE'});await call('Share','share',{title:req.filename,url:f.uri});return}catch(err){alert('خطأ في التصدير: '+(err.message||JSON.stringify(err)));return}}const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=req.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
@@ -328,26 +335,27 @@ async function onUser(user){if(!user){authed=false;ME=null;unlisten();render();r
  catch(e){toast(e&&e.code==='unavailable'?'لا يوجد اتصال بالإنترنت':'هذا الحساب غير مفعّل لدى المدير');try{await fbAuth.signOut()}catch(_){}return}
  authed=true;view='today';listen();watch();render()}
 function unlisten(){UNS.forEach(f=>{try{f()}catch(e){}});UNS=[];ready=false;SYNC={};FIRST=new Set()}
-function fs(n){FIRST.add(n);if(FIRST.size>=7&&!ready){ready=true;if(isAdmin()&&!DB.emps.some(x=>x.id===DB.cur))DB.cur=(DB.emps[0]||{}).id||'';render();if(isAdmin())cloudSave()}}
+function fs(n){FIRST.add(n);if(FIRST.size>=8&&!ready){ready=true;if(isAdmin()&&!DB.emps.some(x=>x.id===DB.cur))DB.cur=(DB.emps[0]||{}).id||'';render();if(isAdmin())cloudSave()}}
 function put(n,id,d){if(n==='employees'){const i=DB.emps.findIndex(x=>x.id===id);if(i<0)DB.emps.push({...d});else DB.emps[i]={...d}}
  else if(n==='att'||n==='lv'){const{e,dt,...v}=d;DB[n][e+'|'+dt]=v}
+ else if(n==='ann'){const i=DB.ann.findIndex(x=>x.id+'|'+x.e===id);if(i<0)DB.ann.push({...d});else DB.ann[i]={...d}}
  else if(n==='tasks'||n==='duties'||n==='reqs'){const i=DB[n].findIndex(x=>x.id===id);if(i<0)DB[n].push({...d});else DB[n][i]={...d}}
  else if(n==='cfg'){DB.cfg={...DEF().cfg,...d}}}
-function rm(n,id){if(n==='employees')DB.emps=DB.emps.filter(x=>x.id!==id);else if(n==='att'||n==='lv')delete DB[n][id];else if(n==='tasks'||n==='duties'||n==='reqs')DB[n]=DB[n].filter(x=>x.id!==id)}
-function chg(n,s){s.docChanges().forEach(c=>{const p=n+'/'+c.doc.id;if(c.type==='removed'){delete SYNC[p];rm(n,c.doc.id)}else{SYNC[p]=sj(c.doc.data());put(n,c.doc.id,c.doc.data())}});fs(n);debRender()}
+function rm(n,id){if(n==='employees')DB.emps=DB.emps.filter(x=>x.id!==id);else if(n==='att'||n==='lv')delete DB[n][id];else if(n==='ann')DB.ann=DB.ann.filter(x=>x.id+'|'+x.e!==id);else if(n==='tasks'||n==='duties'||n==='reqs')DB[n]=DB[n].filter(x=>x.id!==id)}
+function chg(n,s){let nw=0;s.docChanges().forEach(c=>{const p=n+'/'+c.doc.id;if(c.type==='removed'){delete SYNC[p];rm(n,c.doc.id)}else{if(n==='ann'&&ready&&!isAdmin()&&c.type==='added'&&!c.doc.data().rd)nw++;SYNC[p]=sj(c.doc.data());put(n,c.doc.id,c.doc.data())}});if(nw){toast('📢 وصلك تبليغ جديد من المدير');try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}fs(n);debRender()}
 function listen(){unlisten();DB=DEF();if(!isAdmin())DB.cur=ME;
  const col=n=>{const c=fbDb.collection(n);return isAdmin()?c:c.where('e','==',ME)},er=n=>e=>{toast('تعذّر قراءة '+n+' ('+((e&&e.code)||'')+')');fs(n)};
- ['att','tasks','duties','lv','reqs'].forEach(n=>UNS.push(col(n).onSnapshot(s=>chg(n,s),er(n))));
+ ['att','tasks','duties','lv','reqs','ann'].forEach(n=>UNS.push(col(n).onSnapshot(s=>chg(n,s),er(n))));
  if(isAdmin())UNS.push(fbDb.collection('employees').onSnapshot(s=>chg('employees',s),er('employees')));
  else UNS.push(fbDb.doc('employees/'+ME).onSnapshot(s=>{const p='employees/'+ME;if(s.exists){SYNC[p]=sj(s.data());put('employees',ME,s.data())}else{delete SYNC[p];rm('employees',ME)}fs('employees');debRender()},er('employees')));
  UNS.push(fbDb.doc('cfg/main').onSnapshot(s=>{if(s.exists){SYNC['cfg/main']=sj(s.data());put('cfg','main',s.data())}fs('cfg');debRender()},er('cfg')))}
 function localDocs(){const m={};DB.emps.forEach(e=>{const d=nm(e);delete d.h;m['employees/'+e.id]=d});
  Object.entries(DB.att).forEach(([k,v])=>{const[e,dt]=k.split('|');m['att/'+k]=nm({...v,e,dt})});Object.entries(DB.lv).forEach(([k,v])=>{const[e,dt]=k.split('|');m['lv/'+k]=nm({...v,e,dt})});
- DB.tasks.forEach(t=>m['tasks/'+t.id]=nm(t));DB.duties.forEach(t=>m['duties/'+t.id]=nm(t));DB.reqs.forEach(t=>m['reqs/'+t.id]=nm(t));if(isAdmin())m['cfg/main']=nm(DB.cfg);return m}
+ DB.tasks.forEach(t=>m['tasks/'+t.id]=nm(t));DB.duties.forEach(t=>m['duties/'+t.id]=nm(t));DB.reqs.forEach(t=>m['reqs/'+t.id]=nm(t));DB.ann.forEach(a=>m['ann/'+a.id+'|'+a.e]=nm(a));if(isAdmin())m['cfg/main']=nm(DB.cfg);return m}
 function cloudSave(){if(!fbDb)return;clearTimeout(tSave);tSave=setTimeout(flush,250)}
-function wfail(p,e){delete SYNC[p];toast('تعذّر الحفظ في السحابة ('+((e&&e.code)||'')+')')}
+function wfail(p,e){if(!(e&&e.code==='permission-denied'))delete SYNC[p];toast('تعذّر الحفظ في السحابة ('+((e&&e.code)||'')+')')}
 function flush(){if(!fbDb||!authed||!ready)return;const L=localDocs(),A_=isAdmin();
- Object.entries(L).forEach(([p,d])=>{if(!A_&&!/^(att|tasks|duties|reqs)\//.test(p))return;const x=sj(d);if(SYNC[p]!==x){SYNC[p]=x;fbDb.doc(p).set(d).catch(e=>wfail(p,e))}});
+ Object.entries(L).forEach(([p,d])=>{if(!A_&&!/^(att|tasks|duties|reqs|ann)\//.test(p))return;const x=sj(d);if(SYNC[p]!==x){SYNC[p]=x;fbDb.doc(p).set(d).catch(e=>wfail(p,e))}});
  if(A_)Object.keys(SYNC).forEach(p=>{if(!(p in L)){delete SYNC[p];fbDb.doc(p).delete().catch(e=>wfail(p,e))}})}
 function debRender(){clearTimeout(tR);tR=setTimeout(()=>{const a=document.activeElement,v=$('v');if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&v&&v.contains&&v.contains(a)){tR=setTimeout(debRender,1500);return}render()},200)}
 async function createAuth(u,p){let sec;try{sec=firebase.app('sec')}catch(e){sec=firebase.initializeApp(firebaseConfig,'sec')}const c=await sec.auth().createUserWithEmailAndPassword(MAIL(u),p),id=c.user.uid;try{await sec.auth().signOut()}catch(e){}return id}
@@ -358,7 +366,7 @@ async function migrateLocal(){if(!adm())return;let o=null;try{o=JSON.parse(local
  Object.entries(o.att||{}).forEach(([k,v])=>{if(v&&!DB.att[k])DB.att[k]=v});Object.entries(o.lv||{}).forEach(([k,v])=>{if(v&&!DB.lv[k])DB.lv[k]=v});
  ['tasks','duties'].forEach(q=>(o[q]||[]).forEach(r=>{if(!DB[q].some(x=>x.id===r.id))DB[q].push(r)}));
  if(o.cfg)DB.cfg={...DB.cfg,...o.cfg};save();try{localStorage.setItem(KEY+'_old',localStorage.getItem(KEY));localStorage.removeItem(KEY)}catch(e){}toast('تم رفع البيانات إلى السحابة');render()}
-async function dlBackup(){if(!adm())return;try{await saveFile({filename:'نسخة_المهندس_'+today()+'.json',data:new Blob([JSON.stringify({cfg:DB.cfg,emps:DB.emps.map(({photo,...r})=>r),att:DB.att,lv:DB.lv,tasks:DB.tasks,duties:DB.duties,reqs:DB.reqs})],{type:'application/json'})});toast('تم حفظ النسخة')}catch(e){if(e.code!=='declined')toast('تعذّر الحفظ')}}
+async function dlBackup(){if(!adm())return;try{await saveFile({filename:'نسخة_المهندس_'+today()+'.json',data:new Blob([JSON.stringify({cfg:DB.cfg,emps:DB.emps.map(({photo,...r})=>r),att:DB.att,lv:DB.lv,tasks:DB.tasks,duties:DB.duties,reqs:DB.reqs,ann:DB.ann})],{type:'application/json'})});toast('تم حفظ النسخة')}catch(e){if(e.code!=='declined')toast('تعذّر الحفظ')}}
 // ---------- طلبات الإجازات والموافقة ----------
 let RT='إجازة';
 const pc=()=>isAdmin()?DB.reqs.filter(r=>r.st==='pending').length:0;
@@ -388,6 +396,15 @@ async function reqAct(id,ok){if(!adm())return;const r=DB.reqs.find(x=>x.id===id)
   r.st='approved';r.an=r.an||'';toast('تمت الموافقة وأُضيفت إلى جدول الرصيد')}
  else{const a=await askP('سبب الرفض (اختياري)','');if(a===null)return;r.st='rejected';r.an=a.trim();toast('تم رفض الطلب')}
  r.dec=nowTs();save();BM=mk(r.d);render()}
+// ---------- تبليغات وتوجيهات المدير ----------
+const bd=k=>k==='req'?pc():k==='ann'&&!isAdmin()?DB.ann.filter(a=>a.e===ME&&!a.rd).length:0;
+function annBanner(){if(isAdmin())return'';const u=DB.ann.filter(a=>a.e===ME&&!a.rd).sort((a,b)=>b.p-a.p||b.ts.localeCompare(a.ts));if(!u.length)return'';const a=u[0];
+ return`<div class="card" style="border:2px solid ${a.p>1?'var(--ruby)':'var(--gold)'};cursor:pointer" onclick="view='ann';render()"><b>📢 ${u.length} تبليغ جديد من المدير</b><div class="mut">${a.p>1?'عاجل: ':''}${esc((a.t||a.x).slice(0,80))}</div></div>`}
+function annAll(v){DB.emps.forEach(e=>{const c=$('ar_'+e.id);if(c)c.checked=v})}
+function annSend(){if(!adm())return;const x=$('ax').value.trim();if(!x)return toast('اكتب نص التبليغ');const to=DB.emps.filter(e=>$('ar_'+e.id)&&$('ar_'+e.id).checked);if(!to.length)return toast('اختر مستلماً واحداً على الأقل');
+ const id=uid(),ts=nowTs(),t=$('at').value.trim(),p=+$('ap').value||0;to.forEach(e=>DB.ann.push({id,e:e.id,t,x,p,ts}));save();toast('تم إرسال التبليغ إلى '+to.length+' موظف');$('ax').value='';$('at').value='';render()}
+async function annDel(id){if(!adm())return;if(!await askC('حذف هذا التبليغ من جميع المستلمين؟'))return;DB.ann=DB.ann.filter(a=>a.id!==id);save();render()}
+function annRead(id){const a=DB.ann.find(x=>x.id===id&&x.e===ME);if(!a||a.rd)return;a.rd=nowTs();save();render()}
 (function(){render();if(!fbInit()){toast('تعذّر تحميل Firebase. تحقق من الاتصال ثم أعد فتح التطبيق');return}fbAuth.onAuthStateChanged(onUser);addEventListener('offline',()=>toast('لا يوجد اتصال: تُحفظ بياناتك وتُرفع تلقائياً عند عودة الاتصال'));addEventListener('online',()=>toast('عاد الاتصال'))})();
 
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
