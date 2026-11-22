@@ -412,5 +412,151 @@ let IP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e;$
 $('hin').onclick=async()=>{if(!IP)return;IP.prompt();try{await IP.userChoice}catch(e){}IP=null;$('hin').hidden=true};
 addEventListener('appinstalled',()=>{$('hin').hidden=true});
 </script>
+ <!-- ===== الصق هذا الملف كاملاً قبل وسم </body> في آخر ملف تطبيق المهندس ===== -->
+<script>
+/* ===== وحدة «بطاقة شهيد» — تُضاف إلى تطبيق المهندس ===== */
+(function(){
+if(window.__mc)return;window.__mc=1;
+const F=['Cairo','Reem Kufi','Amiri','Tajawal','Almarai','El Messiri','Aref Ruqaa','Noto Kufi Arabic','Lemonada','Markazi Text'];
+const lk=document.createElement('link');lk.rel='stylesheet';lk.href='https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Reem+Kufi:wght@500;700&family=Amiri:wght@400;700&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=El+Messiri:wght@500;700&family=Aref+Ruqaa:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&family=Lemonada:wght@400;700&family=Markazi+Text:wght@400;700&display=swap';document.head.appendChild(lk);
+const needH2C=()=>new Promise((ok,no)=>{if(window.html2canvas)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+const st=document.createElement('style');st.textContent=`
+#mcApp .row{align-items:center}
+#mcApp input[type=color]{width:44px;min-width:44px;flex:0 0 44px;height:38px;padding:2px;margin:0}
+#mcApp input[type=range]{width:110px;min-width:90px;flex:0 0 110px;margin:0}
+#mcApp select{margin:0}#mcApp .btn{flex:0 0 auto}
+#mcApp summary{cursor:pointer;font-weight:700}
+#mcBox{width:100%;max-width:640px;margin:0 auto;position:relative;overflow:hidden;border-radius:10px}
+#mcCard{--bg:#06202a;--bg2:#0d4150;--gold:#d4b06a;--iv:#f6f1e6;width:1080px;height:1350px;position:absolute;top:0;right:0;transform-origin:top right;background:radial-gradient(760px 760px at 50% 40%,var(--bg2),var(--bg) 72%);color:var(--iv);overflow:hidden;direction:rtl;font-family:Cairo,Tahoma,sans-serif;display:flex;flex-direction:column;padding:56px 64px 0;line-height:1.3;text-align:right}
+#mcCard>*{flex:none}
+#mcCard [contenteditable]{outline:none;border-radius:6px}
+#mcCard [contenteditable]:hover{background:rgba(212,176,106,.14)}
+#mcCard [contenteditable]:focus{background:rgba(212,176,106,.24)}
+#mcCard .sel{outline:3px dashed #35a7ff!important;outline-offset:4px}
+#mcCard.mv,#mcCard.mv *{touch-action:none;cursor:move;-webkit-user-select:none;user-select:none}
+.m-bgi,.m-pat{position:absolute;inset:0;pointer-events:none}
+.m-bgi{background:center/cover no-repeat;opacity:.5}.m-pat{opacity:.07}
+.m-hd{position:relative;display:flex;align-items:center;justify-content:space-between;gap:20px;height:130px}
+.m-logo{width:150px;height:130px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gold);font:600 16px/1.4 Cairo;text-align:center}
+.m-logo img{width:100%;height:100%;object-fit:contain}
+.m-mid{flex:1;text-align:center;white-space:nowrap;font:700 40px Aref Ruqaa,Cairo,serif;color:var(--gold)}
+.m-tag{display:flex;align-items:center;gap:10px;background:linear-gradient(#dc2b33,#a51a22);padding:10px 26px;border-radius:40px;font:800 30px Cairo;color:#fff;white-space:nowrap}
+.m-tulip{width:34px;height:34px;flex:none}
+.m-stage{position:relative;width:480px;height:480px;margin:62px auto 0}
+.m-stage:before,.m-stage:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.m-stage:before{inset:-20px;border:3px solid var(--gold)}
+.m-stage:after{inset:-44px;border:1px solid rgba(212,176,106,.45)}
+.m-pic{position:absolute;inset:0;border-radius:50%;background:#12404d center/cover no-repeat;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gold);font:700 26px/1.7 Cairo;cursor:pointer}
+.m-lb{margin-top:66px;display:flex;align-items:center;gap:22px;color:var(--gold);font:500 32px Reem Kufi,Cairo,serif}
+.m-lb i{flex:1;height:1px;background:var(--gold);opacity:.55}
+.m-name{text-align:center;font:700 100px/1.25 Reem Kufi,Cairo,serif;color:var(--iv);margin-top:2px}
+.m-row{display:flex;margin-top:24px;border-top:1px solid rgba(212,176,106,.55);border-bottom:1px solid rgba(212,176,106,.55)}
+.m-cell{flex:1;padding:18px 10px;text-align:center}
+.m-cell+.m-cell{border-right:1px solid rgba(212,176,106,.35)}
+.m-cell small{display:block;font:600 22px Cairo;color:var(--gold);margin-bottom:4px}
+.m-cell b{display:block;font:800 32px/1.3 Cairo}
+.m-quote{margin-top:22px;text-align:center;font:400 26px/1.7 Cairo;color:rgba(246,241,230,.85)}
+.m-ft{margin-top:auto;height:104px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.m-ft b{font:700 36px Reem Kufi,Cairo,serif;color:var(--iv)}
+.m-ft span{font:400 24px Cairo;color:var(--gold);direction:ltr}
+.m-bar{position:absolute;left:0;right:0;bottom:0;height:14px;background:linear-gradient(90deg,var(--gold),#1f8ea3,var(--gold))}
+.m-rib{position:absolute;left:0;top:0;width:230px;height:230px;overflow:hidden;pointer-events:none;z-index:5}
+.m-rib:before{content:"";position:absolute;left:-80px;top:70px;width:340px;height:42px;background:#000;transform:rotate(-45deg)}
+.m-add{position:absolute;line-height:1.4;white-space:nowrap}.m-add img{display:block;max-width:none;width:300px}`;
+document.head.appendChild(st);
+const root=document.createElement('div');root.id='mcApp';
+const tul='<svg class="m-tulip" viewBox="0 0 60 60"><path d="M30 6c-9 4-14 12-10 22 3 6 7 8 10 8s7-2 10-8c4-10-1-18-10-22z" fill="#fff"/><path d="M30 36v18M30 46c-8 0-12-5-13-10 6 1 11 4 13 10zM30 46c8 0 12-5 13-10-6 1-11 4-13 10z" stroke="#fff" stroke-width="3" fill="#fff"/></svg>';
+root.innerHTML=`<h2>بطاقة شهيد</h2>
+<div class="card"><div class="row">
+<span class="pk btn gold">صورة الشهيد<input type="file" accept="image/*" id="mcFp"></span>
+<span class="pk btn">الشعار<input type="file" accept="image/*" id="mcFl"></span>
+<select id="mcTh" aria-label="الثيم"><option value="0">تركوازي</option><option value="1">أخضر زيتوني</option><option value="2">أسود</option><option value="3">كحلي</option><option value="4">عنابي</option></select>
+<button class="btn ghost sm" id="mcRb">إخفاء الشريط الأسود</button></div>
+<div class="row" style="margin-top:8px"><button class="btn gold" id="mcDl">حفظ PNG</button><button class="btn" id="mcSh">مشاركة</button><input id="mcDn" placeholder="اسم التصميم للحفظ"><button class="btn ghost" id="mcSv">حفظ التصميم</button></div></div>
+<details class="card" open><summary>تعديل العنصر المحدد <span class="mut" id="mcSl">— اضغط أي عنصر في البطاقة</span></summary><div class="row" style="margin-top:8px">
+<select id="mcTf"></select><button class="btn ghost sm" id="mcS1">A−</button><button class="btn ghost sm" id="mcS2">A+</button><button class="btn ghost sm" id="mcBd"><b>B</b></button><input type="color" id="mcTc" value="#f6f1e6" aria-label="لون النص">
+<button class="btn ghost sm" id="mcA1">يمين</button><button class="btn ghost sm" id="mcA2">وسط</button><button class="btn ghost sm" id="mcA3">يسار</button>
+<button class="btn ghost sm" id="mcMv">تحريك الأجزاء: متوقف</button><button class="btn ghost sm" id="mcDup">نسخ</button><button class="btn ghost sm" id="mcDel">حذف</button>
+<button class="btn ghost sm" id="mcAt">+ نص</button><span class="pk btn ghost sm">+ صورة<input type="file" accept="image/*" id="mcAi"></span></div></details>
+<details class="card"><summary>الخطوط والألوان والخلفية</summary><div class="row" style="margin-top:8px">
+<span class="mut">العناوين</span><select id="mcGd"></select><span class="mut">النصوص</span><select id="mcGb"></select>
+<span class="mut">الخلفية</span><input type="color" id="mcB1" value="#06202a"><input type="color" id="mcB2" value="#0d4150"><span class="mut">الذهبي</span><input type="color" id="mcGc" value="#d4b06a"><span class="mut">النص</span><input type="color" id="mcIc" value="#f6f1e6">
+<span class="pk btn ghost sm">صورة خلفية<input type="file" accept="image/*" id="mcBi"></span><button class="btn ghost sm" id="mcBx">إزالة</button>
+<span class="mut">شفافية</span><input type="range" id="mcBo" min="0" max="1" step=".05" value=".5"><span class="mut">الزخرفة</span><input type="range" id="mcPo" min="0" max=".3" step=".01" value=".07"></div></details>
+<details class="card"><summary>تصاميمي المحفوظة</summary><div id="mcList" style="margin-top:8px"></div></details>
+<div id="mcBox"><div id="mcCard">
+<svg class="m-pat" width="1080" height="1350"><defs><pattern id="mcP" width="120" height="120" patternUnits="userSpaceOnUse"><circle cx="60" cy="60" r="50" fill="none" stroke="#d4b06a" stroke-width="2"/><circle cx="60" cy="60" r="26" fill="none" stroke="#d4b06a" stroke-width="2"/></pattern></defs><rect width="1080" height="1350" fill="url(#mcP)"/></svg>
+<div class="m-rib"></div>
+<div class="m-hd"><div class="m-logo"><img src="${typeof LOGO!=='undefined'?LOGO:''}" alt=""></div><div class="m-mid" contenteditable="true">الشهداء أمراء أهل الجنّة</div><div class="m-tag">${tul}<span contenteditable="true">بطاقة شهيد</span></div></div>
+<div class="m-stage"><div class="m-pic">اضغط لإضافة<br>صورة الشهيد</div></div>
+<div class="m-lb"><i></i><span contenteditable="true">الشهيد البطل</span><i></i></div>
+<div class="m-name" contenteditable="true">الاسم الثلاثي</div>
+<div class="m-row"><div class="m-cell"><small>تاريخ الاستشهاد</small><b>٢٠٢٣/١١/٢٢</b></div><div class="m-cell"><small>موقع الاستشهاد</small><b>اسم القاطع</b></div><div class="m-cell"><small>الوحدة</small><b>اسم التشكيل</b></div></div>
+<div class="m-quote" contenteditable="true">سطّر أروع صور التضحية والفداء دفاعاً عن الأرض والمقدسات والوطن، ودماؤه الطاهرة منارةٌ تهدي الأجيال.</div>
+<div class="m-ft"><b contenteditable="true">مديرية الشهداء والمضحين</b><span contenteditable="true">https://linktr.ee/yourpage</span></div>
+<div class="m-bar"></div></div></div>`;
+const g=i=>root.querySelector('#mc'+i),Q=s=>root.querySelector(s),card=g('Card'),box=g('Box');
+card.querySelectorAll('.m-cell small,.m-cell b').forEach(e=>e.setAttribute('contenteditable','true'));
+['Tf','Gd','Gb'].forEach(i=>F.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;g(i).appendChild(o)}));
+g('Gd').value='Reem Kufi';g('Gb').value='Cairo';
+let sel=null,prev=null,mv=false,bi=null;
+const say=m=>{try{toast(m)}catch(e){alert(m)}};
+function fit(){const w=box.clientWidth;if(!w)return;const s=Math.min(1,w/1080);card.style.transform='scale('+s+')';box.style.height=(1350*s)+'px'}
+addEventListener('resize',fit);
+const ff=f=>"'"+f+"',Cairo,Tahoma,sans-serif",txt=e=>e.getAttribute('contenteditable')==='true';
+const tr=e=>{e.style.transform='translate('+(+e.dataset.x||0)+'px,'+(+e.dataset.y||0)+'px) scale('+(+e.dataset.s||1)+')'};
+const hex=c=>{const m=c.match(/\d+/g);return m?'#'+m.slice(0,3).map(n=>('0'+(+n).toString(16)).slice(-2)).join(''):'#ffffff'};
+const pick=t=>t.closest('[contenteditable="true"],.m-stage,.m-logo,.m-tag,.m-add');
+function select(t){if(sel)sel.classList.remove('sel');sel=t;const l=g('Sl');if(!t){l.textContent='— اضغط أي عنصر في البطاقة';return}t.classList.add('sel');const cs=getComputedStyle(t);l.textContent=txt(t)?'— نص':'— صورة/شكل';const n=cs.fontFamily.split(',')[0].replace(/["']/g,'').trim();if(F.indexOf(n)>-1)g('Tf').value=n;if(txt(t))g('Tc').value=hex(cs.color)}
+card.addEventListener('click',e=>{if(mv){e.stopPropagation();return}});
+card.addEventListener('mousedown',e=>{if(mv)e.preventDefault()});
+card.addEventListener('pointerdown',ev=>{prev=sel;const t=pick(ev.target);select(t);if(!mv||!t)return;ev.preventDefault();const s=card.getBoundingClientRect().width/1080,sx=ev.clientX,sy=ev.clientY,ox=+t.dataset.x||0,oy=+t.dataset.y||0;
+ const m=e=>{t.dataset.x=ox+(e.clientX-sx)/s;t.dataset.y=oy+(e.clientY-sy)/s;tr(t)},u=()=>{document.removeEventListener('pointermove',m);document.removeEventListener('pointerup',u)};
+ document.addEventListener('pointermove',m);document.addEventListener('pointerup',u)});
+card.addEventListener('click',e=>{if(mv)return;const t=e.target;if(t.closest('.m-pic')&&prev===Q('.m-stage'))g('Fp').click();else if(t.closest('.m-logo')&&prev===Q('.m-logo'))g('Fl').click()});
+function shrink(u,cb){const i=new Image();i.onload=()=>{const k=Math.min(1,1000/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.85))};i.onerror=()=>cb(u);i.src=u}
+function load(i,cb,sh){i.addEventListener('change',()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{sh?shrink(r.result,cb):cb(r.result);i.value=''};r.readAsDataURL(f)})}
+load(g('Fp'),d=>{const p=Q('.m-pic');p.style.backgroundImage='url('+d+')';p.innerHTML=''},1);
+load(g('Fl'),d=>{const l=Q('.m-logo');l.innerHTML='';const i=new Image();i.src=d;l.appendChild(i)});
+load(g('Bi'),d=>{if(!bi){bi=document.createElement('div');bi.className='m-bgi';card.insertBefore(bi,card.firstChild)}bi.style.backgroundImage='url('+d+')';bi.style.opacity=g('Bo').value},1);
+g('Ai').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>shrink(r.result,u=>{const d=document.createElement('div');d.className='m-add';d.style.cssText='left:380px;top:560px';const i=new Image();i.src=u;d.appendChild(i);card.appendChild(d);select(d)});r.readAsDataURL(f);e.target.value=''});
+const need=f=>{if(sel)f(sel)};
+g('Tf').onchange=e=>need(s=>{s.style.fontFamily=ff(e.target.value)});
+const sz=d=>need(s=>{if(txt(s))s.style.fontSize=Math.max(8,parseFloat(getComputedStyle(s).fontSize)+d)+'px';else{s.dataset.s=Math.max(.2,(+s.dataset.s||1)+d*.02);tr(s)}});
+g('S1').onclick=()=>sz(-4);g('S2').onclick=()=>sz(4);
+g('Bd').onclick=()=>need(s=>{s.style.fontWeight=parseInt(getComputedStyle(s).fontWeight)>=700?'400':'800'});
+g('Tc').oninput=e=>need(s=>{s.style.color=e.target.value});
+[['A1','right'],['A2','center'],['A3','left']].forEach(a=>g(a[0]).onclick=()=>need(s=>{s.style.textAlign=a[1]}));
+g('Mv').onclick=function(){mv=!mv;card.classList.toggle('mv',mv);this.textContent='تحريك الأجزاء: '+(mv?'يعمل':'متوقف')};
+g('Del').onclick=()=>need(s=>{s.remove();select(null)});
+g('Dup').onclick=()=>need(s=>{const c=s.cloneNode(true);c.classList.remove('sel');c.dataset.x=(+s.dataset.x||0)+30;c.dataset.y=(+s.dataset.y||0)+30;tr(c);s.parentNode.insertBefore(c,s.nextSibling);select(c)});
+g('At').onclick=()=>{const d=document.createElement('div');d.className='m-add';d.setAttribute('contenteditable','true');d.style.cssText='left:380px;top:640px;font:700 44px Cairo;color:'+getComputedStyle(card).getPropertyValue('--iv');d.textContent='نص جديد';card.appendChild(d);select(d)};
+const grp=(s,f)=>card.querySelectorAll(s).forEach(e=>{e.style.fontFamily=ff(f)});
+g('Gd').onchange=e=>grp('.m-mid,.m-lb span,.m-name,.m-ft b',e.target.value);
+g('Gb').onchange=e=>grp('.m-cell small,.m-cell b,.m-quote,.m-ft span,.m-tag span',e.target.value);
+const V4=['--bg','--bg2','--gold','--iv'],sv=(k,v)=>card.style.setProperty(k,v);
+const T=[['#06202a','#0d4150'],['#0d1816','#15302a'],['#0a0a0a','#202020'],['#0b1626','#16294a'],['#1a0b10','#3a1520']];
+g('Th').onchange=e=>{const t=T[e.target.value];sv('--bg',t[0]);sv('--bg2',t[1]);g('B1').value=t[0];g('B2').value=t[1]};
+g('B1').oninput=e=>sv('--bg',e.target.value);g('B2').oninput=e=>sv('--bg2',e.target.value);g('Gc').oninput=e=>sv('--gold',e.target.value);g('Ic').oninput=e=>sv('--iv',e.target.value);
+g('Bx').onclick=()=>{if(bi){bi.remove();bi=null}};g('Bo').oninput=e=>{if(bi)bi.style.opacity=e.target.value};g('Po').oninput=e=>{Q('.m-pat').style.opacity=e.target.value};
+g('Rb').onclick=function(){const r=Q('.m-rib');const h=r.style.display==='none';r.style.display=h?'':'none';this.textContent=h?'إخفاء الشريط الأسود':'إظهار الشريط الأسود'};
+async function snap(){const s=sel;if(s)s.classList.remove('sel');try{await needH2C();const cv=await html2canvas(card,{scale:2,useCORS:true,backgroundColor:null,onclone:d=>{const c=d.getElementById('mcCard');c.style.transform='none'}});return await new Promise(r=>cv.toBlob(r,'image/png'))}finally{if(s)s.classList.add('sel')}}
+const fname=()=>'بطاقة_'+((Q('.m-name').textContent||'شهيد').trim().replace(/\s+/g,'_'))+'.png';
+g('Dl').onclick=async()=>{say('جارٍ تجهيز الصورة...');try{const b=await snap();await saveFile({filename:fname(),data:b,mime:'image/png'});say('تم حفظ البطاقة')}catch(e){if(!e||e.code!=='declined')say('تعذّر حفظ الصورة')}};
+g('Sh').onclick=async()=>{try{const b=await snap(),f=new File([b],fname(),{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f]});else await saveFile({filename:fname(),data:b,mime:'image/png'})}catch(e){if(e&&e.name!=='AbortError')say('تعذّرت المشاركة')}};
+const KD='mcDesigns',ls=()=>{try{return JSON.parse(localStorage.getItem(KD))||[]}catch(e){return[]}};
+function lset(a){try{localStorage.setItem(KD,JSON.stringify(a));return true}catch(e){say('مساحة التخزين ممتلئة، احذف تصاميم قديمة');return false}}
+function list(){const L=ls(),c=g('List');c.innerHTML='';if(!L.length){c.innerHTML='<div class="empty">لا توجد تصاميم محفوظة</div>';return}
+ L.forEach(d=>{const r=document.createElement('div');r.className='row';r.style.marginBottom='6px';const b=document.createElement('button');b.className='btn ghost sm';b.style.flex='1';b.textContent=d.name;b.onclick=()=>{card.innerHTML=d.html;d.v.forEach((v,i)=>{if(v)sv(V4[i],v)});bi=Q('.m-bgi');select(null);say('تم فتح التصميم')};
+  const x=document.createElement('button');x.className='btn ghost sm';x.textContent='حذف';x.onclick=()=>{if(x.dataset.c){lset(ls().filter(y=>y.id!==d.id));list()}else{x.dataset.c=1;x.textContent='تأكيد الحذف'}};r.append(b,x);c.appendChild(r)})}
+g('Sv').onclick=()=>{const s=sel;if(s)s.classList.remove('sel');const o={id:Date.now()+'',name:g('Dn').value.trim()||('تصميم '+new Date().toLocaleDateString('ar')),html:card.innerHTML,v:V4.map(k=>card.style.getPropertyValue(k))};if(s)s.classList.add('sel');if(lset([o,...ls()])){say('تم حفظ التصميم');g('Dn').value='';list()}};
+list();
+/* ربط الوحدة بالتطبيق */
+TABS.splice(Math.max(0,TABS.findIndex(t=>t[0]==='rep')+1),0,['card','🎖','بطاقة']);
+V.card=()=>'<div id="mcHost"></div>';
+const _r=render;render=function(){_r();if(view==='card'&&typeof authed!=='undefined'&&authed&&ready){const h=document.getElementById('mcHost');if(h){h.appendChild(root);requestAnimationFrame(fit);fit()}}};
+render();
+})();
+                     </script>
 </body>
 </html>
