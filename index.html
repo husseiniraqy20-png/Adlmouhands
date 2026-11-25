@@ -647,6 +647,65 @@ const _r=render;render=function(){_r();
  if(view==='card')setTimeout(cardX,0)};
 render();
 })();
-                                                                                                                        </script>
+ <!-- الصق هذا الملف كاملاً قبل </body> وبعد الوحدتين السابقتين -->
+<script>
+(function(){
+if(window.__x3)return;window.__x3=1;
+const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},SS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('مساحة التخزين ممتلئة')}};
+/* ===== العمل بدون إنترنت وتثبيت الوقت ===== */
+let SK=null;
+async function ping(){SK=null;try{const t=Date.now(),r=await fetch(location.href.split('#')[0],{method:'HEAD',cache:'no-store'}),d=r.headers.get('Date');if(d)SK=new Date(d).getTime()-(t+Date.now())/2}catch(e){}}
+const _rec=rec;rec=function(k,d,man){_rec(k,d,man);const a=DB.att[DB.cur+'|'+today()];if(!a)return;const n=Date.now();if(k==='in'&&!a.pt)a.pt=n;if(k==='out')a.po=n;if(!navigator.onLine)a.off=1;render()};
+const pend=()=>Object.values(DB.att).filter(v=>v.off&&!v.cf).length;
+async function cf(){if(!authed||!ready||!navigator.onLine)return;const P=Object.entries(DB.att).filter(([k,v])=>v.off&&!v.cf&&(isAdmin()||k.startsWith(ME+'|')));if(!P.length)return;await ping();const t=nowTs();
+ P.forEach(([k,v])=>{v.cf=t;if(SK!=null){v.sk=Math.round(SK/1000);if(Math.abs(SK)>300000)v.sus=1}});save();toast('✅ تم تثبيت وقت '+P.length+' تسجيل بعد عودة الاتصال');render()}
+addEventListener('online',()=>{render();setTimeout(cf,1500);setTimeout(XQf,2500)});addEventListener('offline',render);
+setInterval(cf,60000);
+/* ===== منصات المديرية: تيليغرام وفيسبوك ===== */
+const SC=()=>LS('xSoc',{tt:'',tc:'',fp:'',ft:''}),QL=()=>LS('xQ',[]),LG=()=>LS('xLg',[]);
+let XI=null,busyQ=0;
+V.soc=()=>{if(!isAdmin())return'<div class="card empty">للمدير الرئيسي فقط</div>';const c=SC(),q=QL(),l=LG();
+ return`<h2>منصات المديرية</h2><div class="card"><b>ربط الحسابات</b><p class="mut">المفاتيح تُحفظ على جهازك أنت فقط ولا تُرفع للسحابة.</p><label>Telegram Bot Token</label><input id="st1" type="password" dir="ltr" value="${esc(c.tt)}"><label>معرّف القناة (@channel أو رقم)</label><input id="st2" dir="ltr" value="${esc(c.tc)}"><label>Facebook Page ID</label><input id="sf1" dir="ltr" value="${esc(c.fp)}"><label>Facebook Page Access Token</label><input id="sf2" type="password" dir="ltr" value="${esc(c.ft)}"><div class="row"><button class="btn" onclick="XSv()">حفظ</button><button class="btn ghost" onclick="XTest()">اختبار الاتصال</button></div></div>
+ <div class="card"><b>منشور جديد</b><textarea id="sx" rows="5" placeholder="نص المنشور"></textarea><div class="row"><span class="pk btn ghost">📷 صورة<input type="file" accept="image/*" onchange="XSI(this)"></span><span class="mut" id="si"></span></div><div class="row"><label style="flex:0;white-space:nowrap"><input type="checkbox" id="sT" checked style="width:auto"> Telegram</label><label style="flex:0;white-space:nowrap"><input type="checkbox" id="sF" checked style="width:auto"> Facebook</label></div><label>جدولة (اختياري — يُرسل والتطبيق مفتوح)</label><input type="datetime-local" id="sd"><button class="btn gold" onclick="XPost()">نشر</button><p class="mut">بدون إنترنت: يُحفظ المنشور ويُرسل تلقائياً عند عودة الاتصال.</p></div>
+ ${q.length?`<div class="card"><b>بانتظار الإرسال (${q.length})</b>${q.map(p=>`<div class="mut">${esc((p.x||'📷').slice(0,50))} ${p.at?'· '+esc(p.at):''}</div>`).join('')}<button class="btn sm" onclick="XQ()">إرسال الآن</button></div>`:''}
+ <h2>سجل المنشورات</h2>${l.map((p,i)=>{const ok=(p.t&&p.t.ok)||(p.f&&p.f.ok),r=(n,o)=>o?(o.ok?(o.u?`<a href="${esc(o.u)}" target="_blank">${n} ✓</a>`:n+' ✓'):n+' ✗ '+esc(o.e)):'';return`<div class="card"><div class="mut">${esc(p.ts)} · ${r('تيليغرام',p.t)} ${r('فيسبوك',p.f)}</div><div style="white-space:pre-wrap">${esc((p.x||'📷').slice(0,200))}</div>${ok?`<button class="btn ghost sm" onclick="XDel(${i})">حذف من المنصات</button>`:''}</div>`}).join('')||'<div class="empty">لا توجد منشورات</div>'}`};
+window.XSv=()=>{if(!adm())return;SS('xSoc',{tt:$('st1').value.trim(),tc:$('st2').value.trim(),fp:$('sf1').value.trim(),ft:$('sf2').value.trim()});toast('تم الحفظ على هذا الجهاز')};
+window.XSI=i=>{const f=i.files[0];i.value='';if(!f)return;const r=new FileReader();r.onload=()=>{const g=new Image();g.onload=()=>{const k=Math.min(1,1280/Math.max(g.width,g.height)),c=document.createElement('canvas');c.width=g.width*k;c.height=g.height*k;c.getContext('2d').drawImage(g,0,0,c.width,c.height);XI=c.toDataURL('image/jpeg',.85);$('si').textContent='📷 صورة مرفقة'};g.src=r.result};r.readAsDataURL(f)};
+const blob=u=>fetch(u).then(r=>r.blob());
+async function sendT(c,x,img){const b='https://api.telegram.org/bot'+c.tt+'/';let r;
+ if(img){const f=new FormData();f.append('chat_id',c.tc);f.append('caption',x.slice(0,1024));f.append('photo',await blob(img),'p.jpg');r=await fetch(b+'sendPhoto',{method:'POST',body:f})}
+ else r=await fetch(b+'sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:c.tc,text:x.slice(0,4096)})});
+ const j=await r.json();if(!j.ok)throw new Error(j.description||'خطأ');const id=j.result.message_id;return{ok:1,id,u:/^@/.test(c.tc)?'https://t.me/'+c.tc.slice(1)+'/'+id:''}}
+async function sendF(c,x,img){const f=new FormData();f.append('access_token',c.ft);let ep='feed';
+ if(img){ep='photos';f.append('caption',x);f.append('source',await blob(img),'p.jpg')}else f.append('message',x);
+ const r=await fetch('https://graph.facebook.com/v19.0/'+c.fp+'/'+ep,{method:'POST',body:f}),j=await r.json();if(j.error)throw new Error(j.error.message);const id=j.post_id||j.id;return{ok:1,id,u:'https://facebook.com/'+id}}
+window.XPost=async()=>{if(!adm())return;const x=$('sx').value.trim();if(!x&&!XI)return toast('اكتب نص المنشور');if(!$('sT').checked&&!$('sF').checked)return toast('اختر منصة');
+ const q=QL();q.push({x,img:XI,T:$('sT').checked,F:$('sF').checked,at:$('sd').value});SS('xQ',q);XI=null;$('sx').value='';$('si').textContent='';await XQf();render()};
+async function XQf(){if(busyQ||!isAdmin()||!navigator.onLine)return;busyQ=1;const c=SC(),keep=[],lg=LG();
+ try{for(const p of QL()){if(p.at&&new Date(p.at)>new Date()){keep.push(p);continue}
+  const o={ts:nowTs(),x:p.x};let net=0;
+  for(const[k,en,fn,ok]of[['t',p.T,sendT,c.tt&&c.tc],['f',p.F,sendF,c.fp&&c.ft]]){if(!en)continue;if(!ok){o[k]={e:'غير مربوط'};continue}
+   try{o[k]=await fn(c,p.x,p.img)}catch(e){if(e instanceof TypeError)net=1;o[k]={e:e.message}}}
+  if(net)keep.push(p);else{lg.unshift(o);toast('تم النشر')}}}
+ finally{SS('xQ',keep);SS('xLg',lg.slice(0,40));busyQ=0;if(view==='soc')render()}}
+window.XQ=XQf;setInterval(XQf,30000);
+window.XDel=async i=>{if(!adm())return;const l=LG(),p=l[i],c=SC();if(!p||!await askC('حذف المنشور من المنصات؟'))return;
+ try{if(p.t&&p.t.ok)await fetch('https://api.telegram.org/bot'+c.tt+'/deleteMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:c.tc,message_id:p.t.id})});
+  if(p.f&&p.f.ok)await fetch('https://graph.facebook.com/v19.0/'+p.f.id+'?access_token='+encodeURIComponent(c.ft),{method:'DELETE'});
+  l.splice(i,1);SS('xLg',l);toast('تم الحذف');render()}catch(e){toast('تعذّر الحذف: '+e.message)}};
+window.XTest=async()=>{const c=SC();let m=[];
+ try{if(c.tt){const j=await(await fetch('https://api.telegram.org/bot'+c.tt+'/getMe')).json();m.push(j.ok?'تيليغرام: @'+j.result.username:'تيليغرام ✗')}}catch(e){m.push('تيليغرام: لا اتصال')}
+ try{if(c.fp&&c.ft){const j=await(await fetch('https://graph.facebook.com/v19.0/'+c.fp+'?fields=name&access_token='+encodeURIComponent(c.ft))).json();m.push(j.name?'فيسبوك: '+j.name:'فيسبوك ✗ '+((j.error||{}).message||''))}}catch(e){m.push('فيسبوك: لا اتصال')}
+ toast(m.join(' · ')||'أدخل المفاتيح أولاً')};
+/* ===== الربط بالتطبيق ===== */
+TABS.splice(Math.max(0,TABS.findIndex(t=>t[0]==='emp')),0,['soc','📣','المنصات']);
+const _r3=render;render=function(){_r3();if(!authed||!ready)return;
+ if(!isAdmin())document.querySelectorAll('#nav button').forEach(b=>{if(/'soc'/.test(b.getAttribute('onclick')||''))b.remove()});
+ const v=$('v');if(!v)return;
+ if(!navigator.onLine||pend())v.insertAdjacentHTML('afterbegin',`<div class="card" style="border:2px solid ${navigator.onLine?'var(--gold)':'var(--ruby)'}">${navigator.onLine?'🔄 جارٍ تثبيت وقت '+pend()+' تسجيل':'📴 غير متصل — التطبيق يعمل، وتُحفظ تسجيلاتك على الجهاز ويُثبَّت وقتها عند عودة الاتصال'}</div>`);
+ if(isAdmin()&&view==='sup'){const S=Object.entries(DB.att).filter(([k,x])=>x.sus);if(S.length)v.insertAdjacentHTML('beforeend',`<div class="card"><b>⚠ تسجيلات ساعة جهازها غير مطابقة للوقت الحقيقي</b>${S.map(([k,x])=>{const[e,d]=k.split('|');return`<div class="mut">${esc(EMP(e).name)} · ${d} · ${x.in||''} · الفرق ${Math.round(x.sk/60)} دقيقة</div>`}).join('')}</div>`)}};
+render();
+})();
+</script>                                                                                                                       </script>
 </body>
 </html>
