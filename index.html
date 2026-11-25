@@ -410,7 +410,7 @@ function annSend(){if(!adm())return;const x=$('ax').value.trim();if(!x)return to
  const id=uid(),ts=nowTs(),t=$('at').value.trim(),p=+$('ap').value||0;to.forEach(e=>DB.ann.push({id,e:e.id,t,x,p,ts}));save();toast('تم إرسال التبليغ إلى '+to.length+' موظف');$('ax').value='';$('at').value='';render()}
 async function annDel(id){if(!adm())return;if(!await askC('حذف هذا التبليغ من جميع المستلمين؟'))return;DB.ann=DB.ann.filter(a=>a.id!==id);save();render()}
 function annRead(id){const a=DB.ann.find(x=>x.id===id&&x.e===ME);if(!a||a.rd)return;a.rd=nowTs();save();render()}
-(function(){render();if(!fbInit()){toast('تعذّر تحميل Firebase. تحقق من الاتصال ثم أعد فتح التطبيق');return}fbAuth.onAuthStateChanged(onUser);addEventListener('offline',()=>toast('لا يوجد اتصال: تُحفظ بياناتك وتُرفع تلقائياً عند عودة الاتصال'));addEventListener('online',()=>toast('عاد الاتصال'))})();
+window.onerror=function(m,u,l){document.body.innerHTML+='<div style="background:#fee;color:#900;padding:10px;margin:10px;direction:ltr">'+m+' (Line '+l+')</div>'};render();if(!fbInit())toast('تعذر تحميل Firebase');else fbAuth.onAuthStateChanged(onUser);
 
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 let IP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e;$('hin').hidden=false});
