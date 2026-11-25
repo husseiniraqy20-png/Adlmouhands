@@ -149,4 +149,42 @@ const _r3=render;render=function(){_r3();if(!authed||!ready)return;
 render();
 })();
 }catch(e){console.error("addons module 2",e);try{toast("خطأ في إحدى الإضافات: "+e.message)}catch(_){}}
+/* === حفظ الجلسة والدخول التلقائي بدون إنترنت === */
+(function(){
+  const SK_U = 'muhandis_offline_user';
+  // حفظ بيانات المستخدم وقاعدة البيانات محلياً عند الاتصال بالإنترنت
+  setInterval(() => {
+    try {
+      if (typeof authed !== 'undefined' && authed && typeof ME !== 'undefined' && ME) {
+        localStorage.setItem(SK_U, JSON.stringify({
+          ME: ME,
+          emps: (typeof DB !== 'undefined' && DB.emps) ? DB.emps : [],
+          set: (typeof DB !== 'undefined' && DB.set) ? DB.set : {}
+        }));
+      }
+    } catch(e) {}
+  }, 3000);
+
+  // استرجاع الجلسة والدخول المباشر عند فتح التطبيق بدون إنترنت
+  function bootOffline() {
+    if (!navigator.onLine) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SK_U) || 'null');
+        if (saved && saved.ME) {
+          window.ME = saved.ME;
+          window.authed = true;
+          window.ready = true;
+          if (typeof DB !== 'undefined') {
+            if (saved.emps && saved.emps.length) DB.emps = saved.emps;
+            if (saved.set) DB.set = Object.assign(DB.set || {}, saved.set);
+          }
+          if (typeof render === 'function') render();
+        }
+      } catch(e) {}
+    }
+  }
+  setTimeout(bootOffline, 600);
+  window.addEventListener('offline', bootOffline);
+})();
+
 
