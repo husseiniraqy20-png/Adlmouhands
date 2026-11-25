@@ -103,7 +103,7 @@ function ask(msg,o={}){return new Promise(res=>{const d=document.createElement('
  document.body.appendChild(d);const v=d.querySelector('#dlgv');if(v){v.value=o.def==null?'':o.def;try{v.focus()}catch(e){}}
  const fin=x=>{d.remove();res(x)};d.querySelector('#dlgok').onclick=()=>fin(o.input?(v?v.value:''):true);const n=d.querySelector('#dlgno');if(n)n.onclick=()=>fin(o.input?null:false);const al=d.querySelector('#dlgalt');if(al)al.onclick=()=>fin('ALT')})}
 const askC=m=>ask(m),askP=(m,def)=>ask(m,{input:1,def});
-let ME=null;const isAdmin=()=>ME==='admin',adm=()=>isAdmin()||(toast('هذا الإجراء للمدير الرئيسي فقط'),false);
+window.ME=null;const isAdmin=()=>ME==='admin',adm=()=>isAdmin()||(toast('هذا الإجراء للمدير الرئيسي فقط'),false);
 const EMP=id=>DB.emps.find(x=>x.id===id)||DB.emps[0]||{id:'',name:'',title:'',spec:'',phone:'',photo:'',user:''};
 const A=(d,e=DB.cur)=>DB.att[e+'|'+d];
 const off=d=>DB.cfg.wk.includes(pd(d).getDay())||DB.cfg.hol.includes(d);
@@ -151,8 +151,11 @@ let view='today',BM=mk(today()),R={k:'month',d:today()},EF=null;
 const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['req','✉','الطلبات'],['ann','📢','التبليغات'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
 function render(){
  $('hl').src=LOGO;
- if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML=`<div class="card login"><img src="${LOGO}" alt="الشعار"><h2 style="border:0;padding:0;text-align:center">المهندس</h2><label>اسم المستخدم</label><input id="lu" autocomplete="username" dir="ltr"><label>كلمة المرور</label><input id="lp" type="password" autocomplete="current-password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button></div><div class="credit">إعداد المهندس حسين الزيدي</div>`;return}
- if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ تحميل البيانات من السحابة...</div>';return}if(!isAdmin()&&ME)DB.cur=ME;
+ if(!authed&&!navigator.onLine&&localStorage.getItem('off_me')){ME=localStorage.getItem('off_me');authed=true;ready=true;}
+
+ if(authed&&ME&&navigator.onLine)localStorage.setItem('off_me',ME);
+if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ التحميل من السحابة...</div>';return}
+
  const hs=$('hs');hs.hidden=!isAdmin();$('hout').hidden=false;hs.innerHTML=DB.emps.map(e=>`<option value="${e.id}" ${e.id===DB.cur?'selected':''}>${esc(e.name||'موظف')}</option>`).join('');
  if((!isAdmin()&&(view==='emp'||view==='set'))||(isAdmin()&&view==='acc'))view='today';
  $('nav').innerHTML=TABS.filter(t=>isAdmin()?t[0]!=='acc':!['emp','set'].includes(t[0])).map(t=>`<button class="${view===t[0]?'on':''}" onclick="view='${t[0]}';render();scrollTo(0,0)"><i>${t[1]}</i>${t[2]}${bd(t[0])?`<span class="bdg">${bd(t[0])}</span>`:''}</button>`).join('');
@@ -161,7 +164,8 @@ function render(){
 }
 function authMsg(e){const c=(e&&e.code)||'';if(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c))return'اسم المستخدم أو كلمة المرور غير صحيحة';if(c==='auth/too-many-requests')return'محاولات كثيرة، انتظر قليلاً ثم أعد المحاولة';if(c==='auth/network-request-failed')return'لا يوجد اتصال بالإنترنت';if(c==='auth/operation-not-allowed')return'فعّل تسجيل الدخول بالبريد وكلمة المرور من Firebase Authentication';if(c==='auth/requires-recent-login')return'أعد تسجيل الدخول ثم حاول مجدداً';if(c==='auth/weak-password')return'كلمة المرور ضعيفة (6 أحرف فأكثر)';return'تعذّر التنفيذ: '+(c||'خطأ')}
 async function doLogin(){const u=$('lu').value.trim().toLowerCase(),p=$('lp').value;if(!UNRE.test(u))return toast('اسم المستخدم: حروف إنجليزية وأرقام فقط');if(!p)return toast('أدخل كلمة المرور');if(!fbInit())return toast('تعذّر تحميل Firebase، تأكد من الاتصال بالإنترنت');toast('جارٍ تسجيل الدخول...');try{await fbAuth.signInWithEmailAndPassword(MAIL(u),p)}catch(e){toast(authMsg(e))}}
-async function logout(){if(wid!=null&&navigator.geolocation){navigator.geolocation.clearWatch(wid);wid=null}LOC=null;if(!fbAuth){authed=false;ME=null;render();return}try{flush();await Promise.race([fbDb.waitForPendingWrites(),new Promise(r=>setTimeout(r,3000))])}catch(e){}try{await fbAuth.signOut()}catch(e){}}
+async function logout()localStorage.removeItem('off_me');
+{if(wid!=null&&navigator.geolocation){navigator.geolocation.clearWatch(wid);wid=null}LOC=null;if(!fbAuth){authed=false;ME=null;render();return}try{flush();await Promise.race([fbDb.waitForPendingWrites(),new Promise(r=>setTimeout(r,3000))])}catch(e){}try{await fbAuth.signOut()}catch(e){}}
 const rec1=(k,t)=>`<div class="card row"><div><b>${esc(t.x)}</b><div class="mut">${t.d}${t.ty?' · '+esc(t.ty):''}${t.n?' · '+esc(t.n):''}</div></div>${isAdmin()?`<span style="flex:0;white-space:nowrap"><button class="btn ghost sm" onclick="editRec('${k}','${t.id}')">تعديل</button> <button class="btn ghost sm" onclick="del('${k}','${t.id}')">حذف</button></span>`:''}</div>`;
 const list=(k,n)=>[...mine(k)].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,n).map(t=>rec1(k,t)).join('')||'<div class="empty">لا توجد سجلات</div>';
 const V={
