@@ -149,42 +149,46 @@ const _r3=render;render=function(){_r3();if(!authed||!ready)return;
 render();
 })();
 }catch(e){console.error("addons module 2",e);try{toast("خطأ في إحدى الإضافات: "+e.message)}catch(_){}}
-/* === حفظ الجلسة والدخول التلقائي بدون إنترنت === */
+/* === حفظ الجلسة والدخول المباشر بدون إنترنت (محدث) === */
 (function(){
-  const SK_U = 'muhandis_offline_user';
-  // حفظ بيانات المستخدم وقاعدة البيانات محلياً عند الاتصال بالإنترنت
-  setInterval(() => {
-    try {
-      if (typeof authed !== 'undefined' && authed && typeof ME !== 'undefined' && ME) {
-        localStorage.setItem(SK_U, JSON.stringify({
-          ME: ME,
-          emps: (typeof DB !== 'undefined' && DB.emps) ? DB.emps : [],
-          set: (typeof DB !== 'undefined' && DB.set) ? DB.set : {}
-        }));
-      }
-    } catch(e) {}
-  }, 3000);
+  const SK_U = 'muhandis_offline_session';
 
-  // استرجاع الجلسة والدخول المباشر عند فتح التطبيق بدون إنترنت
-  function bootOffline() {
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('button');
+    if (btn && btn.textContent.includes('تسجيل الدخول')) {
+      const inputs = document.querySelectorAll('input');
+      const u = inputs[0] ? inputs[0].value.trim() : '';
+      const p = inputs[1] ? inputs[1].value.trim() : '';
+      if (u && p && navigator.onLine) {
+        localStorage.setItem(SK_U, JSON.stringify({ u: u, p: p, ts: Date.now() }));
+      }
+    }
+  }, true);
+
+  function bypassLoginOffline() {
     if (!navigator.onLine) {
-      try {
-        const saved = JSON.parse(localStorage.getItem(SK_U) || 'null');
-        if (saved && saved.ME) {
-          window.ME = saved.ME;
-          window.authed = true;
-          window.ready = true;
-          if (typeof DB !== 'undefined') {
-            if (saved.emps && saved.emps.length) DB.emps = saved.emps;
-            if (saved.set) DB.set = Object.assign(DB.set || {}, saved.set);
+      const saved = JSON.parse(localStorage.getItem(SK_U) || 'null');
+      if (saved && saved.u) {
+        document.querySelectorAll('div, section, form').forEach(el => {
+          if (el.innerText && el.innerText.includes('تسجيل الدخول') && el.querySelector('input[type="password"]')) {
+            el.style.display = 'none';
           }
-          if (typeof render === 'function') render();
-        }
-      } catch(e) {}
+        });
+        const appMain = document.getElementById('app') || document.querySelector('.app-container, main');
+        if (appMain) appMain.style.display = 'block';
+        try { if (typeof render === 'function') render(); } catch(_) {}
+      }
     }
   }
-  setTimeout(bootOffline, 600);
-  window.addEventListener('offline', bootOffline);
+
+  setTimeout(bypassLoginOffline, 800);
+  setTimeout(bypassLoginOffline, 2000);
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('button');
+    if (btn && btn.textContent.includes('تسجيل الدخول') && !navigator.onLine) {
+      e.preventDefault();
+      e.stopPropagation();
+      bypassLoginOffline();
+    }
+  }, true);
 })();
-
-
