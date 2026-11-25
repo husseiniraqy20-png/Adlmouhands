@@ -151,7 +151,8 @@ let view='today',BM=mk(today()),R={k:'month',d:today()},EF=null;
 const TABS=[['today','◉','اليوم'],['log','✎','السجل'],['bal','▥','الرصيد'],['req','✉','الطلبات'],['ann','📢','التبليغات'],['rep','▤','التقارير'],['emp','☻','الموظفون'],['set','⚙','الإعدادات'],['acc','☺','حسابي']];
 function render(){
  $('hl').src=LOGO;
- if(!authed&&!navigator.onLine&&localStorage.getItem('off_me')){ME=localStorage.getItem('off_me');authed=true;ready=true;}
+ if(!authed&&!navigator.onLine&&localStorage.getItem('off_me')){ME=localStorage.getItem('off_me');authed=true;ready=true;}if(!authed){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=true;$('v').innerHTML='<div class="card login"><img src="'+LOGO+'"><h2>المهندس</h2><label>اسم المستخدم</label><input id="lu" dir="ltr" autocomplete="username"><label>كلمة المرور</label><input id="lp" type="password" dir="ltr" autocomplete="current-password"><button class="btn" onclick="doLogin()">تسجيل الدخول</button></div><div class="credit">إعداد المهندس حسين الزيدي</div>';return}
+
 
  if(authed&&ME&&navigator.onLine)localStorage.setItem('off_me',ME);
 if(!ready){$('nav').innerHTML='';$('hs').hidden=true;$('hout').hidden=false;$('v').innerHTML='<div class="card empty">جارٍ التحميل من السحابة...</div>';return}
