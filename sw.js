@@ -1,5 +1,5 @@
 // ضعه بجانب ملف التطبيق (نفس المجلد) باسم sw.js — وغيّر V عند كل تحديث للتطبيق
-const V='muhandis-v11';
+const V='muhandis-v14';
 const CORE=['./','./index.html','./manifest.webmanifest','./addons.js','./icon-192.png',
 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap',
 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
