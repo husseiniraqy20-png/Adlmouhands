@@ -1,4 +1,23 @@
 /* addons.js — المحادثة، التقييم، التقرير النهائي، الإشراف، محرر البطاقة، العمل دون إنترنت، تيليغرام وفيسبوك */
+/* ===== إصلاحات الملف الأساسي (دوال محذوفة + العمل دون إنترنت) ===== */
+try{(function(){
+if(window.__fx)return;window.__fx=1;
+window.saveHQ=function(){if(!adm())return;const a=parseFloat($('la').value),b=parseFloat($('lo').value),r=parseInt($('rr').value);if([a,b,r].some(isNaN))return toast('قيم غير صحيحة');Object.assign(DB.cfg,{lat:a,lng:b,r});save();toast('تم الحفظ')};
+window.addH=function(){if(!adm())return;const d=$('hd').value;if(d&&!DB.cfg.hol.includes(d)){DB.cfg.hol.push(d);save();render()}};
+window.delH=function(h){if(!adm())return;DB.cfg.hol=DB.cfg.hol.filter(x=>x!==h);save();render()};
+window.togWk=function(i){if(!adm())return;const w=DB.cfg.wk,j=w.indexOf(i);j<0?w.push(i):w.splice(j,1);save()};
+window.photoUp=async function(i){const f=i.files&&i.files[0];if(!f||!EF)return;let img=null,url=null;
+ try{try{img=await createImageBitmap(f,{imageOrientation:'from-image'})}catch(e){img=null}
+  if(!img){url=URL.createObjectURL(f);img=await new Promise((ok,no)=>{const x=new Image();x.onload=()=>ok(x);x.onerror=no;x.src=url})}
+  const w=img.width,h=img.height,q=Math.min(w,h),c=document.createElement('canvas');c.width=c.height=240;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,240,240);g.drawImage(img,(w-q)/2,(h-q)/2,q,q,0,0,240,240);
+  EF.photo=c.toDataURL('image/jpeg',.85);$('pv').innerHTML=av(EF);toast('تم اختيار الصورة، اضغط حفظ')}
+ catch(e){toast('تعذّر قراءة الصورة. جرّب صورة JPG أو PNG')}finally{if(url)URL.revokeObjectURL(url);i.value=''}};
+const _r0=render;render=function(){
+ try{if(!authed&&!navigator.onLine&&localStorage.getItem('off_me')&&fbInit()){ME=localStorage.getItem('off_me');authed=true;listen();watch()}}catch(e){}
+ _r0()};
+addEventListener('offline',()=>toast('لا يوجد اتصال: تُحفظ بياناتك وتُرفع تلقائياً عند عودة الاتصال'));
+addEventListener('online',()=>toast('عاد الاتصال'));
+})()}catch(e){console.error('fixes',e);try{toast('خطأ في الإصلاحات: '+e.message)}catch(_){}}
 try{
 (function(){
 if(window.__x2)return;window.__x2=1;
@@ -149,46 +168,3 @@ const _r3=render;render=function(){_r3();if(!authed||!ready)return;
 render();
 })();
 }catch(e){console.error("addons module 2",e);try{toast("خطأ في إحدى الإضافات: "+e.message)}catch(_){}}
-/* === حفظ الجلسة والدخول المباشر بدون إنترنت (محدث) === */
-(function(){
-  const SK_U = 'muhandis_offline_session';
-
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('button');
-    if (btn && btn.textContent.includes('تسجيل الدخول')) {
-      const inputs = document.querySelectorAll('input');
-      const u = inputs[0] ? inputs[0].value.trim() : '';
-      const p = inputs[1] ? inputs[1].value.trim() : '';
-      if (u && p && navigator.onLine) {
-        localStorage.setItem(SK_U, JSON.stringify({ u: u, p: p, ts: Date.now() }));
-      }
-    }
-  }, true);
-
-  function bypassLoginOffline() {
-    if (!navigator.onLine) {
-      const saved = JSON.parse(localStorage.getItem(SK_U) || 'null');
-      if (saved && saved.u) {
-        document.querySelectorAll('div, section, form').forEach(el => {
-          if (el.innerText && el.innerText.includes('تسجيل الدخول') && el.querySelector('input[type="password"]')) {
-            el.style.display = 'none';
-          }
-        });
-        const appMain = document.getElementById('app') || document.querySelector('.app-container, main');
-        if (appMain) appMain.style.display = 'block';
-        try { if (typeof render === 'function') render(); } catch(_) {}
-      }
-    }
-  }
-
-  setTimeout(bypassLoginOffline, 800);
-  setTimeout(bypassLoginOffline, 2000);
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('button');
-    if (btn && btn.textContent.includes('تسجيل الدخول') && !navigator.onLine) {
-      e.preventDefault();
-      e.stopPropagation();
-      bypassLoginOffline();
-    }
-  }, true);
-})();
